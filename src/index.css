@@ -1,1 +1,13 @@
 @import "tailwindcss";
+
+:root {
+  font-size: 75%;
+}
+
+html, body, #root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}

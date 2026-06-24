@@ -1,15 +1,35 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
+import DashboardLayout from "./layouts/DashboardLayout";
+
+import DashboardPage from "./pages/DashboardPage";
+import EmployeesPage from "./pages/EmployeesPage";
+import BranchesPage from "./pages/BranchesPage";
+import AttendancePage from "./pages/AttendancePage";
+import LiveTrackingPage from "./pages/LiveTrackingPage";
+import AlertsPage from "./pages/AlertsPage";
+import ReportsPage from "./pages/ReportsPage";
+import SettingsPage from "./pages/SettingsPage";
 
 function App() {
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center">
-      <h1 className="text-4xl font-bold text-teal-600">
-        EMS Admin Frontend
-      </h1>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route element={<DashboardLayout />}>
+          <Route path="/" element={<Navigate to="/dashboard" />} />
+
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/employees" element={<EmployeesPage />} />
+          <Route path="/branches" element={<BranchesPage />} />
+          <Route path="/attendance" element={<AttendancePage />} />
+          <Route path="/live-tracking" element={<LiveTrackingPage />} />
+          <Route path="/alerts" element={<AlertsPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
-export default App
+
+export default App;
