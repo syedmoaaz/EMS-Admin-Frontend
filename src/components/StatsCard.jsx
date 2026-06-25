@@ -23,13 +23,13 @@ const StatsCard = ({
 
       {/* Number */}
 
-    <h2 className="text-[28px] font-bold text-slate-900 mt-5 leading-none">
+    <h2 className="text-[26px] font-bold text-slate-900 mt-5 leading-none">
         {value}
       </h2>
 
       {/* Title */}
 
-<p className="text-[14px] font-medium text-slate-600 mt-2 leading-5 min-h-[40px]">
+<p className="text-[14px] font-medium text-slate-600 mt-2 leading-5 min-h-10">
         {title}
       </p>
 

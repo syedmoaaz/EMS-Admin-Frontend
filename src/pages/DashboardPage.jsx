@@ -88,8 +88,8 @@ const DashboardPage = () => {
       Overview
     </p>
 
-    <h1 className="text-[34px] font-bold text-slate-900 mt-1">
-      Good Morning, Saad
+    <h1 className="text-[30px] font-semibold text-slate-900 mt-1">
+    Good Morning, Saad
     </h1>
 
     <p className="text-slate-500 mt-1">
