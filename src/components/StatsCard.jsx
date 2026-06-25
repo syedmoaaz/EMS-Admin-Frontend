@@ -11,7 +11,7 @@ const StatsCard = ({
   iconColor,
 }) => {
   return (
-<div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_10px_rgba(15,23,42,0.05)] p-4 h-[185px] hover:shadow-[0_6px_18px_rgba(15,23,42,0.08)] transition-all duration-300">
+<div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_10px_rgba(15,23,42,0.05)] p-4 h-[175px] hover:shadow-[0_6px_18px_rgba(15,23,42,0.08)] transition-all duration-300">
 
       {/* Icon */}
 
@@ -23,7 +23,7 @@ const StatsCard = ({
 
       {/* Number */}
 
-    <h2 className="text-[32px] font-bold text-slate-900 mt-5 leading-none">
+    <h2 className="text-[28px] font-bold text-slate-900 mt-5 leading-none">
         {value}
       </h2>
 

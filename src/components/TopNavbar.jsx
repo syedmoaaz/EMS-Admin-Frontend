@@ -35,7 +35,7 @@ const TopNavbar = () => {
 
         {/* Search */}
 
-        <div className="relative w-[420px]">
+        <div className="relative w-105">
 
           <Search
             size={18}
