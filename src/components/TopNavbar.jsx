@@ -1,43 +1,109 @@
-import { Bell, Search } from "lucide-react";
+import {
+  Bell,
+  Search,
+  CalendarDays,
+  Building2,
+  UserPlus,
+} from "lucide-react";
 
 const TopNavbar = () => {
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
   return (
-    <header className="h-16 bg-white border-b px-8 flex items-center justify-between">
-      <div className="relative w-85">
-        <Search
-          size={18}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-        />
+    <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between">
 
-        <input
-          type="text"
-          placeholder="Search employees..."
-          className="w-full pl-11 pr-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+      {/* Left Side */}
 
-      <div className="flex items-center gap-5">
-        <button className="relative">
-          <Bell size={22} />
+      <div className="flex items-center gap-4">
 
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1.5 rounded-full">
-            5
+        {/* Company */}
+
+        <button className="flex items-center gap-3 bg-slate-100 rounded-xl px-4 py-2 hover:bg-slate-200 transition">
+
+          <Building2 size={18} className="text-blue-600" />
+
+          <span className="font-medium">
+            NovaPharma Ltd.
           </span>
+
         </button>
 
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-            M
+        {/* Search */}
+
+        <div className="relative w-[420px]">
+
+          <Search
+            size={18}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+          />
+
+          <input
+            type="text"
+            placeholder="Search employees, branches, IDs..."
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-4 outline-none focus:ring-2 focus:ring-blue-500"
+          />
+
+        </div>
+
+      </div>
+
+      {/* Right Side */}
+
+      <div className="flex items-center gap-4">
+
+        {/* Date */}
+
+        <div className="flex items-center gap-2 border rounded-xl px-4 py-2 text-sm text-slate-600">
+
+          <CalendarDays size={18} />
+
+          {today}
+
+        </div>
+
+        {/* Notification */}
+
+        <button className="relative w-11 h-11 border rounded-xl flex items-center justify-center">
+
+          <Bell size={20} />
+
+          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center">
+            5
+          </span>
+
+        </button>
+
+        {/* Profile */}
+
+        <div className="flex items-center gap-3 border rounded-xl px-3 py-2">
+
+          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold">
+
+            SK
+
           </div>
 
           <div>
-            <h4 className="font-semibold">Moaaz</h4>
-            <p className="text-xs text-gray-500">
-              Admin
+
+            <h4 className="font-semibold text-sm">
+              Saad Karim
+            </h4>
+
+            <p className="text-xs text-slate-500">
+              Super Admin
             </p>
+
           </div>
+
         </div>
+
       </div>
+
     </header>
   );
 };
