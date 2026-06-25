@@ -13,19 +13,68 @@ import StatsCard from "../components/dashboard/StatsCard";
 const stats = [
   {
     title: "Total Employees",
-    value: "128",
+    value: 128,
+    icon: Users,
+    iconBg: "bg-blue-50",
+    iconColor: "text-blue-600",
+    change: "+4",
+    changeText: "this month",
+    positive: true,
   },
+
   {
     title: "Present Today",
-    value: "102",
+    value: 102,
+    icon: UserCheck,
+    iconBg: "bg-green-50",
+    iconColor: "text-green-600",
+    change: "+3.2%",
+    changeText: "vs yesterday",
+    positive: true,
   },
+
   {
     title: "Absent Today",
-    value: "18",
+    value: 18,
+    icon: UserX,
+    iconBg: "bg-red-50",
+    iconColor: "text-red-500",
+    change: "+2",
+    changeText: "vs yesterday",
+    positive: false,
   },
+
   {
-    title: "Active Employees",
-    value: "24",
+    title: "Late Arrivals",
+    value: 8,
+    icon: Clock3,
+    iconBg: "bg-orange-50",
+    iconColor: "text-orange-500",
+    change: "-1",
+    changeText: "vs yesterday",
+    positive: true,
+  },
+
+  {
+    title: "Active Field Employees",
+    value: 24,
+    icon: Radio,
+    iconBg: "bg-indigo-50",
+    iconColor: "text-indigo-600",
+    change: "+6",
+    changeText: "live now",
+    positive: true,
+  },
+
+  {
+    title: "Active Alerts",
+    value: 5,
+    icon: TriangleAlert,
+    iconBg: "bg-red-50",
+    iconColor: "text-red-500",
+    change: "+2",
+    changeText: "needs action",
+    positive: false,
   },
 ];
 
