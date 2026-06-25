@@ -1,3 +1,15 @@
+import {
+  Users,
+  UserCheck,
+  UserX,
+  Clock3,
+  Radio,
+  TriangleAlert,
+} from "lucide-react";
+
+import StatsCard from "../components/dashboard/StatsCard";
+
+
 const stats = [
   {
     title: "Total Employees",
