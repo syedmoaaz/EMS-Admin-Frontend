@@ -11,31 +11,31 @@ const StatsCard = ({
   iconColor,
 }) => {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition-all duration-300">
+<div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_10px_rgba(15,23,42,0.05)] p-4 h-[185px] hover:shadow-[0_6px_18px_rgba(15,23,42,0.08)] transition-all duration-300">
 
       {/* Icon */}
 
-      <div
-        className={`w-12 h-12 rounded-2xl flex items-center justify-center ${iconBg}`}
-      >
-        <Icon size={24} className={iconColor} />
+     <div
+  className={`w-11 h-11 rounded-xl flex items-center justify-center ${iconBg}`}
+>
+        <Icon size={21} className={iconColor} />
       </div>
 
       {/* Number */}
 
-      <h2 className="text-[42px] font-bold text-slate-900 mt-6 leading-none">
+    <h2 className="text-[32px] font-bold text-slate-900 mt-5 leading-none">
         {value}
       </h2>
 
       {/* Title */}
 
-      <p className="text-slate-600 mt-3 text-lg">
+<p className="text-[14px] font-medium text-slate-600 mt-2 leading-5 min-h-[40px]">
         {title}
       </p>
 
       {/* Growth */}
 
-      <div className="flex items-center gap-1 mt-5 text-sm">
+  <div className="flex items-center gap-1 mt-5 text-[13px]">
 
         {positive ? (
           <TrendingUp
