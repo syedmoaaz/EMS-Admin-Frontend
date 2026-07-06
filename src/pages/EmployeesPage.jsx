@@ -1,181 +1,209 @@
-import { Search, Plus, Filter } from "lucide-react";
+import { useState } from "react";
+import { Search, Plus, Users } from "lucide-react";
+import AddEmployeeDrawer from "../components/employees/AddEmployeeDrawer";
 
 const EmployeesPage = () => {
+  const [openDrawer, setOpenDrawer] = useState(false);
+
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
 
-      {/* Header */}
+        {/* Header */}
 
-      <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between">
 
-        <div>
-          <p className="text-blue-600 font-semibold text-sm uppercase">
-            Employee Management
-          </p>
+          <div>
+            <p className="text-blue-600 text-sm font-semibold uppercase">
+              Employee Management
+            </p>
 
-          <h1 className="text-3xl font-bold text-slate-900 mt-1">
-            Employees
-          </h1>
+            <h1 className="text-3xl font-bold mt-1">
+              Employees
+            </h1>
 
-          <p className="text-slate-500 mt-1">
-            Manage employees across all company branches.
-          </p>
+            <p className="text-slate-500 mt-1">
+              Manage employees across all company branches.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setOpenDrawer(true)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl font-medium shadow"
+          >
+            <Plus size={18} />
+            Add Employee
+          </button>
+
         </div>
 
-        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl font-medium shadow">
-          <Plus size={18} />
-          Add Employee
-        </button>
+        {/* Filters */}
 
-      </div>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
 
-      {/* Filters */}
+          <div className="grid grid-cols-4 gap-4">
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+            {/* Search */}
 
-        <div className="grid grid-cols-4 gap-4">
+            <div className="relative">
 
-          {/* Search */}
+              <Search
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+              />
 
-          <div className="relative">
+              <input
+                placeholder="Search employee..."
+                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
+              />
 
-            <Search
-              size={18}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-            />
+            </div>
 
-            <input
-              placeholder="Search employee..."
-              className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            {/* Branch */}
+
+            <select className="rounded-xl border border-slate-200 px-4 py-3">
+
+              <option>All Branches</option>
+
+              <option>Head Office</option>
+
+              <option>Karachi</option>
+
+              <option>Lahore</option>
+
+              <option>Islamabad</option>
+
+            </select>
+
+            {/* Designation */}
+
+            <select className="rounded-xl border border-slate-200 px-4 py-3">
+
+              <option>All Designations</option>
+
+              <option>Manager</option>
+
+              <option>Medical Representative</option>
+
+              <option>Dispatcher</option>
+
+            </select>
+
+            {/* Status */}
+
+            <select className="rounded-xl border border-slate-200 px-4 py-3">
+
+              <option>All Status</option>
+
+              <option>Active</option>
+
+              <option>Inactive</option>
+
+            </select>
 
           </div>
 
-          {/* Branch */}
+        </div>
 
-          <select className="rounded-xl border border-slate-200 px-4 py-3 outline-none">
+        {/* Table */}
 
-            <option>All Branches</option>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
 
-            <option>Head Office</option>
+          <table className="w-full">
 
-            <option>Karachi</option>
+            <thead className="bg-slate-50 border-b">
 
-            <option>Lahore</option>
+              <tr>
 
-            <option>Islamabad</option>
+                <th className="px-6 py-4 text-left font-semibold">
+                  Employee
+                </th>
 
-          </select>
+                <th className="px-6 py-4 text-left font-semibold">
+                  Employee ID
+                </th>
 
-          {/* Designation */}
+                <th className="px-6 py-4 text-left font-semibold">
+                  Designation
+                </th>
 
-          <select className="rounded-xl border border-slate-200 px-4 py-3 outline-none">
+                <th className="px-6 py-4 text-left font-semibold">
+                  Phone
+                </th>
 
-            <option>All Designations</option>
+                <th className="px-6 py-4 text-left font-semibold">
+                  Branch
+                </th>
 
-            <option>Manager</option>
+                <th className="px-6 py-4 text-left font-semibold">
+                  Status
+                </th>
 
-            <option>Medical Representative</option>
+                <th className="px-6 py-4 text-center font-semibold">
+                  Actions
+                </th>
 
-            <option>Dispatcher</option>
+              </tr>
 
-            <option>Accountant</option>
+            </thead>
 
-          </select>
+            <tbody>
 
-          {/* Status */}
+              <tr>
 
-          <select className="rounded-xl border border-slate-200 px-4 py-3 outline-none">
+                <td
+                  colSpan={7}
+                  className="py-20"
+                >
 
-            <option>All Status</option>
+                  <div className="flex flex-col items-center">
 
-            <option>Active</option>
+                    <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center">
 
-            <option>Inactive</option>
+                      <Users
+                        size={36}
+                        className="text-blue-600"
+                      />
 
-          </select>
+                    </div>
+
+                    <h2 className="text-xl font-semibold mt-5">
+                      No Employees Found
+                    </h2>
+
+                    <p className="text-slate-500 mt-2">
+                      Add your first employee to get started.
+                    </p>
+
+                    <button
+                      onClick={() => setOpenDrawer(true)}
+                      className="mt-6 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl"
+                    >
+                      <Plus size={18} />
+                      Add Employee
+                    </button>
+
+                  </div>
+
+                </td>
+
+              </tr>
+
+            </tbody>
+
+          </table>
 
         </div>
 
       </div>
 
-      {/* Employee Table */}
+      {/* Drawer */}
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-
-        <table className="w-full">
-
-          <thead className="bg-slate-50 border-b">
-
-            <tr className="text-left">
-
-              <th className="px-6 py-4 font-semibold">Employee ID</th>
-
-              <th className="px-6 py-4 font-semibold">Employee</th>
-
-              <th className="px-6 py-4 font-semibold">Designation</th>
-
-              <th className="px-6 py-4 font-semibold">Phone</th>
-
-              <th className="px-6 py-4 font-semibold">Branch</th>
-
-              <th className="px-6 py-4 font-semibold">Status</th>
-
-              <th className="px-6 py-4 font-semibold text-center">
-                Actions
-              </th>
-
-            </tr>
-
-          </thead>
-
-          <tbody>
-
-            <tr>
-
-              <td
-                colSpan={7}
-                className="py-24 text-center"
-              >
-
-                <div className="flex flex-col items-center">
-
-                  <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
-
-                    <Filter
-                      className="text-slate-400"
-                      size={28}
-                    />
-
-                  </div>
-
-                  <h2 className="mt-5 text-xl font-semibold">
-                    No Employees Found
-                  </h2>
-
-                  <p className="text-slate-500 mt-2">
-                    Start by adding your first employee.
-                  </p>
-
-                  <button className="mt-6 bg-blue-600 hover:bg-blue-700 transition text-white px-6 py-3 rounded-xl font-medium">
-
-                    + Add Employee
-
-                  </button>
-
-                </div>
-
-              </td>
-
-            </tr>
-
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </div>
+      <AddEmployeeDrawer
+        open={openDrawer}
+        onClose={() => setOpenDrawer(false)}
+      />
+    </>
   );
 };
 
