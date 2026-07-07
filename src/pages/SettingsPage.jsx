@@ -15,7 +15,7 @@ const SettingsPage = () => {
         </h2>
 
         <p className="text-slate-500 mt-2">
-          Coming Soon...
+          Coming Soon
         </p>
       </div>
     </div>
