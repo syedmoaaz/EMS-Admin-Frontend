@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { X, Camera, Upload } from "lucide-react";
+import { branches, ROLES } from "../../data";
 
 const AddEmployeeDrawer = ({ open, onClose }) => {
   const fileInputRef = useRef(null);
@@ -162,15 +163,10 @@ const AddEmployeeDrawer = ({ open, onClose }) => {
               </label>
 
               <select className="w-full border rounded-xl px-4 py-3">
-
                 <option>Select Branch</option>
-
-                <option>Head Office</option>
-
-                <option>Karachi</option>
-
-                <option>Lahore</option>
-
+                {branches.map((branch) => (
+                  <option key={branch.id}>{branch.name}</option>
+                ))}
               </select>
 
             </div>
@@ -184,15 +180,12 @@ const AddEmployeeDrawer = ({ open, onClose }) => {
               </label>
 
               <select className="w-full border rounded-xl px-4 py-3">
-
                 <option>Select Designation</option>
-
-                <option>Manager</option>
-
-                <option>Medical Representative</option>
-
+                <option>Branch Manager</option>
+                <option>HR Executive</option>
+                <option>Accountant</option>
+                <option>Order Taker</option>
                 <option>Dispatcher</option>
-
               </select>
 
             </div>
@@ -206,15 +199,9 @@ const AddEmployeeDrawer = ({ open, onClose }) => {
               </label>
 
               <select className="w-full border rounded-xl px-4 py-3">
-
-                <option>Office Staff</option>
-
-                <option>Medical Representative</option>
-
-                <option>Order Booker</option>
-
-                <option>Dispatcher</option>
-
+                <option>{ROLES.OFFICE_STAFF}</option>
+                <option>{ROLES.ORDER_TAKER}</option>
+                <option>{ROLES.DISPATCHER}</option>
               </select>
 
             </div>

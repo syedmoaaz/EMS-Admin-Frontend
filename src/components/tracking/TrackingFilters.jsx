@@ -1,8 +1,8 @@
 import {
   Search,
   RefreshCw,
-  MapPinned,
 } from "lucide-react";
+import { branches } from "../../data";
 
 const TrackingFilters = () => {
   return (
@@ -34,10 +34,9 @@ const TrackingFilters = () => {
           <select className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500">
 
             <option>All Branches</option>
-            <option>Head Office</option>
-            <option>Karachi</option>
-            <option>Lahore</option>
-            <option>Islamabad</option>
+            {branches.map((branch) => (
+              <option key={branch.id}>{branch.name}</option>
+            ))}
 
           </select>
 
@@ -66,8 +65,7 @@ const TrackingFilters = () => {
           <select className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500">
 
             <option>All Field Staff</option>
-            <option>Medical Representative</option>
-            <option>Order Booker</option>
+            <option>Order Taker</option>
             <option>Dispatcher</option>
 
           </select>
