@@ -1,0 +1,29 @@
+import Employee from "../models/Employee.js";
+import Branch from "../models/Branch.js";
+import Attendance from "../models/Attendance.js";
+import Tracking from "../models/Tracking.js";
+import asyncHandler from "../utils/asyncHandler.js";
+
+// @desc   Aggregated dashboard stats
+// @route  GET /api/dashboard/stats
+export const getDashboardStats = asyncHandler(async (req, res) => {
+  const [totalEmployees, totalBranches, attendance, tracking] =
+    await Promise.all([
+      Employee.countDocuments(),
+      Branch.countDocuments(),
+      Attendance.find(),
+      Tracking.find(),
+    ]);
+
+  res.json({
+    success: true,
+    data: {
+      totalEmployees,
+      totalBranches,
+      presentToday: attendance.filter((r) => r.status === "Present").length,
+      absentToday: attendance.filter((r) => r.status === "Absent").length,
+      lateToday: attendance.filter((r) => r.status === "Late").length,
+      activeField: tracking.filter((r) => r.online).length,
+    },
+  });
+});

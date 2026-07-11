@@ -3,10 +3,17 @@ import {
   Search,
   CalendarDays,
   Building2,
-  UserPlus,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const TopNavbar = () => {
+  const { user } = useAuth();
+  const initials = user?.name
+    ?.split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() ?? "AD";
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     day: "numeric",
@@ -83,21 +90,12 @@ const TopNavbar = () => {
         <div className="flex items-center gap-3 border rounded-xl px-3 py-2">
 
           <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold">
-
-            SK
-
+            {initials}
           </div>
 
           <div>
-
-            <h4 className="font-semibold text-sm">
-              Saad Karim
-            </h4>
-
-            <p className="text-xs text-slate-500">
-              Super Admin
-            </p>
-
+            <h4 className="font-semibold text-sm">{user?.name ?? "Admin"}</h4>
+            <p className="text-xs text-slate-500">{user?.role ?? "Administrator"}</p>
           </div>
 
         </div>
