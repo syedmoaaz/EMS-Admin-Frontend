@@ -2,7 +2,6 @@ import Branch from "../models/Branch.js";
 import Employee from "../models/Employee.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
-// @desc   Get all branches (with active employee count)
 // @route  GET /api/branches
 export const getBranches = asyncHandler(async (req, res) => {
   const { search } = req.query;
