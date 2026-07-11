@@ -24,7 +24,7 @@ const LoginPage = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -35,10 +35,15 @@ const LoginPage = () => {
 
     setSubmitting(true);
 
-    const result = login(userId, password);
+    try {
+      const result = await login(userId, password);
 
-    if (!result.success) {
-      setError(result.message);
+      if (!result.success) {
+        setError(result.message);
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
       setSubmitting(false);
     }
   };

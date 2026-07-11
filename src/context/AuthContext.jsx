@@ -1,44 +1,68 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { authenticateUser } from "../data/auth";
+import * as authService from "../services/authService";
 
-const AUTH_STORAGE_KEY = "ems_auth_user";
+const TOKEN_KEY = "ems_auth_token";
+const USER_KEY = "ems_auth_user";
 
 const AuthContext = createContext(null);
+
+const getErrorMessage = (error, fallback = "Something went wrong. Please try again.") => {
+  return error.response?.data?.message || error.message || fallback;
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    const restoreSession = async () => {
+      const token = localStorage.getItem(TOKEN_KEY);
 
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {
-        localStorage.removeItem(AUTH_STORAGE_KEY);
+      if (!token) {
+        setLoading(false);
+        return;
       }
-    }
 
-    setLoading(false);
+      try {
+        const { user: currentUser } = await authService.getMe();
+        setUser(currentUser);
+        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+      } catch {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    restoreSession();
   }, []);
 
-  const login = (userId, password) => {
-    const authenticatedUser = authenticateUser(userId, password);
+  const login = async (userId, password) => {
+    try {
+      const { token, user: authenticatedUser } = await authService.login(
+        userId,
+        password
+      );
 
-    if (!authenticatedUser) {
-      return { success: false, message: "Invalid User ID or password." };
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(USER_KEY, JSON.stringify(authenticatedUser));
+      setUser(authenticatedUser);
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        message: getErrorMessage(error, "Invalid User ID or password."),
+      };
     }
-
-    setUser(authenticatedUser);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authenticatedUser));
-
-    return { success: true };
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
   };
 
   return (
