@@ -2,9 +2,20 @@ import mongoose from "mongoose";
 
 const attendanceSchema = new mongoose.Schema(
   {
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+      index: true,
+    },
     employee: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Employee",
+      required: true,
+    },
+    branch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Branch",
       required: true,
     },
     date: { type: String, required: true },
@@ -25,6 +36,6 @@ const attendanceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-attendanceSchema.index({ employee: 1, date: 1 }, { unique: true });
+attendanceSchema.index({ company: 1, employee: 1, date: 1 }, { unique: true });
 
 export default mongoose.model("Attendance", attendanceSchema);

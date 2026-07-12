@@ -2,11 +2,16 @@ import mongoose from "mongoose";
 
 const trackingSchema = new mongoose.Schema(
   {
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+      index: true,
+    },
     employee: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Employee",
       required: true,
-      unique: true,
     },
     status: {
       type: String,
@@ -23,5 +28,7 @@ const trackingSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+trackingSchema.index({ company: 1, employee: 1 }, { unique: true });
 
 export default mongoose.model("Tracking", trackingSchema);

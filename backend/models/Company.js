@@ -1,18 +1,27 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
-const userSchema = new mongoose.Schema(
+const companySchema = new mongoose.Schema(
   {
-    userId: {
+    companyName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    ownerName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    email: {
       type: String,
       required: true,
       unique: true,
       trim: true,
-      uppercase: true,
+      lowercase: true,
     },
-    name: {
+    phone: {
       type: String,
-      required: true,
       trim: true,
     },
     password: {
@@ -21,29 +30,24 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
       select: false,
     },
-    role: {
+    status: {
       type: String,
-      enum: ["Super Admin", "Branch Manager"],
-      default: "Branch Manager",
-    },
-    branch: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Branch",
-      default: null,
+      enum: ["Active", "Inactive"],
+      default: "Active",
     },
   },
   { timestamps: true }
 );
 
-userSchema.pre("save", async function (next) {
+companySchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-userSchema.methods.comparePassword = function (candidate) {
+companySchema.methods.comparePassword = function (candidate) {
   return bcrypt.compare(candidate, this.password);
 };
 
-export default mongoose.model("User", userSchema);
+export default mongoose.model("Company", companySchema);

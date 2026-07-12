@@ -2,19 +2,14 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 
 import connectDB from "../config/db.js";
+import Company from "../models/Company.js";
+import Settings from "../models/Settings.js";
 import Branch from "../models/Branch.js";
 import Employee from "../models/Employee.js";
 import Attendance from "../models/Attendance.js";
 import Tracking from "../models/Tracking.js";
-import User from "../models/User.js";
 
-import {
-  branches,
-  employees,
-  attendance,
-  tracking,
-  users,
-} from "./data.js";
+import { company, branches, employees, attendance, tracking } from "./data.js";
 
 dotenv.config();
 
@@ -26,68 +21,69 @@ const run = async () => {
 
     console.log("Clearing existing collections...");
     await Promise.all([
+      Company.deleteMany(),
+      Settings.deleteMany(),
       Branch.deleteMany(),
       Employee.deleteMany(),
       Attendance.deleteMany(),
       Tracking.deleteMany(),
-      User.deleteMany(),
     ]);
 
-    // Branches
+    const createdCompany = await Company.create(company);
+    const companyId = createdCompany._id;
+    console.log(`Seeded company: ${company.companyName}`);
+
+    await Settings.create({ company: companyId });
+    console.log("Seeded default settings");
+
     const branchIdMap = {};
     for (const b of branches) {
       const { ref, ...doc } = b;
-      const created = await Branch.create(doc);
+      const created = await Branch.create({ ...doc, company: companyId });
       branchIdMap[ref] = created._id;
     }
     console.log(`Seeded ${branches.length} branches`);
 
-    // Employees
     const employeeIdMap = {};
+    const employeeBranchMap = {};
     for (const e of employees) {
       const { ref, branchRef, ...doc } = e;
       const created = await Employee.create({
         ...doc,
+        company: companyId,
         branch: branchIdMap[branchRef],
       });
       employeeIdMap[ref] = created._id;
+      employeeBranchMap[ref] = branchIdMap[branchRef];
     }
     console.log(`Seeded ${employees.length} employees`);
 
-    // Attendance (today)
     for (const a of attendance) {
       const { employeeRef, ...doc } = a;
       await Attendance.create({
         ...doc,
+        company: companyId,
         employee: employeeIdMap[employeeRef],
+        branch: employeeBranchMap[employeeRef],
         date: today,
       });
     }
     console.log(`Seeded ${attendance.length} attendance records`);
 
-    // Tracking
     for (const t of tracking) {
       const { employeeRef, ...doc } = t;
       await Tracking.create({
         ...doc,
+        company: companyId,
         employee: employeeIdMap[employeeRef],
         lastUpdated: Date.now(),
       });
     }
     console.log(`Seeded ${tracking.length} tracking records`);
 
-    // Users (password hashing handled by pre-save hook -> use create per doc)
-    for (const u of users) {
-      const { branchRef, ...doc } = u;
-      await User.create({
-        ...doc,
-        branch: branchRef ? branchIdMap[branchRef] : null,
-      });
-    }
-    console.log(`Seeded ${users.length} users`);
-
     console.log("\nSeed complete. Login credentials:");
-    users.forEach((u) => console.log(`  ${u.userId} / ${u.password} (${u.role})`));
+    console.log(`  Email:    ${company.email}`);
+    console.log(`  Password: ${company.password}`);
 
     await mongoose.connection.close();
     process.exit(0);

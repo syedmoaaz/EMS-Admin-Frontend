@@ -1,12 +1,13 @@
 import Attendance from "../models/Attendance.js";
+import Employee from "../models/Employee.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { companyQuery } from "../utils/companyScope.js";
 
-// @desc   Get attendance list (filters: date, branch, status, method, search)
 // @route  GET /api/attendance
 export const getAttendance = asyncHandler(async (req, res) => {
   const { date, status, method } = req.query;
+  const query = companyQuery(req);
 
-  const query = {};
   if (date) query.date = date;
   if (status && status !== "all") query.status = status;
   if (method && method !== "all") query.method = method;
@@ -20,13 +21,13 @@ export const getAttendance = asyncHandler(async (req, res) => {
   res.json({ success: true, count: records.length, data: records });
 });
 
-// @desc   Get attendance stats
 // @route  GET /api/attendance/stats
 export const getAttendanceStats = asyncHandler(async (req, res) => {
   const { date } = req.query;
-  const match = date ? { date } : {};
+  const query = companyQuery(req);
+  if (date) query.date = date;
 
-  const records = await Attendance.find(match);
+  const records = await Attendance.find(query);
 
   res.json({
     success: true,
@@ -40,24 +41,44 @@ export const getAttendanceStats = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc   Get attendance history for one employee
 // @route  GET /api/attendance/history/:employeeId
 export const getAttendanceHistory = asyncHandler(async (req, res) => {
-  const records = await Attendance.find({
-    employee: req.params.employeeId,
-  }).sort({ date: -1 });
+  const employee = await Employee.findOne(
+    companyQuery(req, { _id: req.params.employeeId })
+  );
+
+  if (!employee) {
+    res.status(404);
+    throw new Error("Employee not found");
+  }
+
+  const records = await Attendance.find(
+    companyQuery(req, { employee: req.params.employeeId })
+  ).sort({ date: -1 });
 
   res.json({ success: true, count: records.length, data: records });
 });
 
-// @desc   Create / upsert attendance record
 // @route  POST /api/attendance
 export const createAttendance = asyncHandler(async (req, res) => {
-  const { employee, date } = req.body;
+  const { employee, date, branch } = req.body;
+
+  const employeeDoc = await Employee.findOne(
+    companyQuery(req, { _id: employee })
+  );
+
+  if (!employeeDoc) {
+    res.status(404);
+    throw new Error("Employee not found");
+  }
 
   const record = await Attendance.findOneAndUpdate(
-    { employee, date },
-    req.body,
+    { company: req.companyId, employee, date },
+    {
+      ...req.body,
+      company: req.companyId,
+      branch: branch || employeeDoc.branch,
+    },
     { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
   );
 

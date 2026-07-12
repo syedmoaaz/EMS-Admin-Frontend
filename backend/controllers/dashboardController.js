@@ -3,16 +3,18 @@ import Branch from "../models/Branch.js";
 import Attendance from "../models/Attendance.js";
 import Tracking from "../models/Tracking.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { companyQuery } from "../utils/companyScope.js";
 
-// @desc   Aggregated dashboard stats
 // @route  GET /api/dashboard/stats
 export const getDashboardStats = asyncHandler(async (req, res) => {
+  const filter = companyQuery(req);
+
   const [totalEmployees, totalBranches, attendance, tracking] =
     await Promise.all([
-      Employee.countDocuments(),
-      Branch.countDocuments(),
-      Attendance.find(),
-      Tracking.find(),
+      Employee.countDocuments(filter),
+      Branch.countDocuments(filter),
+      Attendance.find(filter),
+      Tracking.find(filter),
     ]);
 
   res.json({

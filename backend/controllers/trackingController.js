@@ -1,22 +1,23 @@
 import Tracking from "../models/Tracking.js";
+import Employee from "../models/Employee.js";
+import { FIELD_EMPLOYEE_TYPES } from "../models/Employee.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { companyQuery } from "../utils/companyScope.js";
 
-// @desc   Get live tracking list
 // @route  GET /api/tracking/live
 export const getLiveTracking = asyncHandler(async (req, res) => {
-  const records = await Tracking.find().populate({
+  const records = await Tracking.find(companyQuery(req)).populate({
     path: "employee",
-    select: "name image designation role branch",
+    select: "name image designation role branch department",
     populate: { path: "branch", select: "name" },
   });
 
   res.json({ success: true, count: records.length, data: records });
 });
 
-// @desc   Get tracking stats
 // @route  GET /api/tracking/stats
 export const getTrackingStats = asyncHandler(async (req, res) => {
-  const records = await Tracking.find();
+  const records = await Tracking.find(companyQuery(req));
 
   res.json({
     success: true,
@@ -31,12 +32,11 @@ export const getTrackingStats = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc   Get one employee's tracking detail
 // @route  GET /api/tracking/:employeeId
 export const getEmployeeTracking = asyncHandler(async (req, res) => {
-  const record = await Tracking.findOne({
-    employee: req.params.employeeId,
-  }).populate("employee", "name image designation role");
+  const record = await Tracking.findOne(
+    companyQuery(req, { employee: req.params.employeeId })
+  ).populate("employee", "name image designation role department");
 
   if (!record) {
     res.status(404);
@@ -46,14 +46,32 @@ export const getEmployeeTracking = asyncHandler(async (req, res) => {
   res.json({ success: true, data: record });
 });
 
-// @desc   Update location (from field device / mobile app)
 // @route  POST /api/tracking/update
 export const updateTracking = asyncHandler(async (req, res) => {
-  const { employee } = req.body;
+  const { employee, company: bodyCompany } = req.body;
+
+  const employeeDoc = await Employee.findOne({ _id: employee });
+
+  if (!employeeDoc) {
+    res.status(404);
+    throw new Error("Employee not found");
+  }
+
+  if (!FIELD_EMPLOYEE_TYPES.includes(employeeDoc.role)) {
+    res.status(400);
+    throw new Error("Only field employees can have GPS tracking data");
+  }
+
+  const companyId = req.companyId || bodyCompany || employeeDoc.company;
+
+  if (req.companyId && employeeDoc.company.toString() !== req.companyId.toString()) {
+    res.status(403);
+    throw new Error("Employee does not belong to your company");
+  }
 
   const record = await Tracking.findOneAndUpdate(
-    { employee },
-    { ...req.body, lastUpdated: Date.now() },
+    { company: companyId, employee },
+    { ...req.body, company: companyId, lastUpdated: Date.now() },
     { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
   );
 

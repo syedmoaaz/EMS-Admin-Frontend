@@ -181,10 +181,7 @@ const LoginPage = () => {
                 Demo credentials
               </p>
               <p className="text-sm text-slate-600 mt-1">
-                <span className="font-medium">ADMIN001</span> / admin123
-              </p>
-              <p className="text-sm text-slate-600">
-                <span className="font-medium">MGR001</span> / manager123
+                <span className="font-medium">owner@novapharma.com</span> / admin123
               </p>
             </div>
           </div>

@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        const { user: currentUser } = await authService.getMe();
+        const { user: currentUser } = await authService.getProfile();
         setUser(currentUser);
         localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
       } catch {
@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (userId, password) => {
     try {
       const { token, user: authenticatedUser } = await authService.login(
-        userId,
+        userId.trim().toLowerCase(),
         password
       );
 
@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       return {
         success: false,
-        message: getErrorMessage(error, "Invalid User ID or password."),
+        message: getErrorMessage(error, "Invalid email or password."),
       };
     }
   };

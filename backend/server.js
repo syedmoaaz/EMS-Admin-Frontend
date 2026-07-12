@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
-import authRoutes from "./routes/authRoutes.js";
+import companyRoutes from "./routes/companyRoutes.js";
 import branchRoutes from "./routes/branchRoutes.js";
 import employeeRoutes from "./routes/employeeRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
@@ -30,7 +30,7 @@ app.get("/api/health", (req, res) =>
   res.json({ success: true, message: "EMS API is running" })
 );
 
-app.use("/api/auth", authRoutes);
+app.use("/api/company", companyRoutes);
 app.use("/api/branches", branchRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/attendance", attendanceRoutes);

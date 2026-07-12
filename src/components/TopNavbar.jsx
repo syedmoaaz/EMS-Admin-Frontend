@@ -35,7 +35,7 @@ const TopNavbar = () => {
           <Building2 size={18} className="text-blue-600" />
 
           <span className="font-medium">
-            NovaPharma Ltd.
+            {user?.companyName ?? "NovaPharma Ltd."}
           </span>
 
         </button>
@@ -95,7 +95,7 @@ const TopNavbar = () => {
 
           <div>
             <h4 className="font-semibold text-sm">{user?.name ?? "Admin"}</h4>
-            <p className="text-xs text-slate-500">{user?.role ?? "Administrator"}</p>
+            <p className="text-xs text-slate-500">{user?.companyName ?? "Company Owner"}</p>
           </div>
 
         </div>
