@@ -13,6 +13,8 @@ import attendanceRoutes from "./routes/attendanceRoutes.js";
 import trackingRoutes from "./routes/trackingRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import alertRoutes from "./routes/alertRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
 
 dotenv.config();
 
@@ -38,6 +40,8 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/tracking", trackingRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/alerts", alertRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/reports", reportRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

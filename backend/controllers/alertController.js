@@ -1,6 +1,7 @@
 import Alert from "../models/Alert.js";
 import Attendance from "../models/Attendance.js";
 import Tracking from "../models/Tracking.js";
+import Settings from "../models/Settings.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { companyQuery } from "../utils/companyScope.js";
 
@@ -57,6 +58,14 @@ export const syncCompanyAlerts = async (companyId) => {
   const today = new Date().toISOString().slice(0, 10);
   const filter = { company: companyId };
 
+  let settings = await Settings.findOne({ company: companyId });
+  if (!settings) {
+    settings = await Settings.create({ company: companyId });
+  }
+
+  const alertsCfg = settings.alertSettings || {};
+  const batteryThreshold = alertsCfg.lowBatteryThreshold ?? 35;
+
   const [attendance, tracking] = await Promise.all([
     Attendance.find({ ...filter, date: today }).populate(
       "employee",
@@ -71,7 +80,7 @@ export const syncCompanyAlerts = async (companyId) => {
 
     const branchId = record.branch || emp.branch;
 
-    if (record.status === "Absent") {
+    if (record.status === "Absent" && alertsCfg.absentAlert !== false) {
       await upsertAlert({
         companyId,
         type: "absent",
@@ -84,7 +93,7 @@ export const syncCompanyAlerts = async (companyId) => {
       });
     }
 
-    if (record.status === "Late") {
+    if (record.status === "Late" && alertsCfg.lateAlert !== false) {
       await upsertAlert({
         companyId,
         type: "late",
@@ -104,7 +113,10 @@ export const syncCompanyAlerts = async (companyId) => {
 
     const branchId = emp.branch;
 
-    if (track.status === "GPS Disabled") {
+    if (
+      track.status === "GPS Disabled" &&
+      alertsCfg.gpsDisabledAlert !== false
+    ) {
       await upsertAlert({
         companyId,
         type: "gps_disabled",
@@ -117,23 +129,29 @@ export const syncCompanyAlerts = async (companyId) => {
       });
     }
 
-    if (track.status === "Offline" || track.online === false) {
-      if (track.status !== "GPS Disabled") {
-        await upsertAlert({
-          companyId,
-          type: "offline",
-          severity: "warning",
-          title: "Employee Offline",
-          message: `${emp.name} is currently offline.`,
-          employeeId: emp._id,
-          branchId,
-          sourceDate: today,
-        });
-      }
+    if (
+      (track.status === "Offline" || track.online === false) &&
+      track.status !== "GPS Disabled" &&
+      alertsCfg.offlineAlert !== false
+    ) {
+      await upsertAlert({
+        companyId,
+        type: "offline",
+        severity: "warning",
+        title: "Employee Offline",
+        message: `${emp.name} is currently offline.`,
+        employeeId: emp._id,
+        branchId,
+        sourceDate: today,
+      });
     }
 
     const battery = batteryPercent(track.battery);
-    if (battery !== null && battery <= 35) {
+    if (
+      battery !== null &&
+      battery <= batteryThreshold &&
+      alertsCfg.lowBatteryAlert !== false
+    ) {
       await upsertAlert({
         companyId,
         type: "low_battery",

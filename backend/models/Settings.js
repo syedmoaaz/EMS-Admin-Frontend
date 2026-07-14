@@ -14,7 +14,14 @@ const settingsSchema = new mongoose.Schema(
     },
     workingDays: {
       type: [String],
-      default: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+      default: [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+      ],
     },
     attendanceRules: {
       lateThresholdMinutes: { type: Number, default: 15 },
@@ -29,7 +36,9 @@ const settingsSchema = new mongoose.Schema(
       absentAlert: { type: Boolean, default: true },
       lateAlert: { type: Boolean, default: true },
       gpsDisabledAlert: { type: Boolean, default: true },
+      offlineAlert: { type: Boolean, default: true },
       lowBatteryAlert: { type: Boolean, default: true },
+      lowBatteryThreshold: { type: Number, default: 35 },
     },
   },
   { timestamps: true }
