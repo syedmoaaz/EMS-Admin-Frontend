@@ -153,14 +153,16 @@ const LiveTrackingPage = () => {
           Live Tracking
         </p>
 
-        <h1 className="text-3xl font-bold mt-1">Field Employee Tracking</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mt-1">
+          Field Employee Tracking
+        </h1>
 
-        <p className="text-slate-500 mt-1">
+        <p className="text-slate-500 mt-1 text-sm sm:text-base">
           Monitor all field employees in real time.
         </p>
       </div>
 
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
         {stats.map((item) => (
           <TrackingStatsCard key={item.title} {...item} />
         ))}
@@ -186,8 +188,8 @@ const LiveTrackingPage = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-8">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <div className="xl:col-span-8">
           <LiveMap
             records={filtered}
             selectedId={selected?._id}
@@ -195,7 +197,7 @@ const LiveTrackingPage = () => {
           />
         </div>
 
-        <div className="col-span-4">
+        <div className="xl:col-span-4">
           <OnlineEmployees
             records={filtered}
             loading={loading}

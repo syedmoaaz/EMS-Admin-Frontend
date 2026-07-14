@@ -47,7 +47,7 @@ const EmployeeLocationDrawer = ({ open, onClose, record }) => {
       />
 
       <div
-        className={`fixed top-0 right-0 h-screen w-[480px] bg-white shadow-2xl z-50 transition-transform duration-300 ${
+        className={`fixed top-0 right-0 h-screen w-full max-w-[480px] bg-white shadow-2xl z-50 transition-transform duration-300 ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >

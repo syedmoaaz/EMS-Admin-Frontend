@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -13,8 +13,11 @@ import {
   RefreshCw,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import Pagination from "../components/Pagination";
 import * as alertService from "../services/alertService";
 import * as branchService from "../services/branchService";
+
+const PAGE_SIZE = 10;
 
 const typeMeta = {
   absent: { label: "Absent", icon: UserX, color: "text-red-600 bg-red-50" },
@@ -53,6 +56,7 @@ const AlertsPage = () => {
   const [severity, setSeverity] = useState("all");
   const [branch, setBranch] = useState("all");
   const [isRead, setIsRead] = useState("all");
+  const [page, setPage] = useState(1);
 
   const loadBranches = useCallback(async () => {
     try {
@@ -92,6 +96,15 @@ const AlertsPage = () => {
   useEffect(() => {
     loadAlerts();
   }, [loadAlerts]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [type, severity, branch, isRead]);
+
+  const pagedAlerts = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return alerts.slice(start, start + PAGE_SIZE);
+  }, [alerts, page]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -155,22 +168,22 @@ const AlertsPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <p className="text-blue-600 text-sm font-semibold uppercase">
             Alerts & Notifications
           </p>
-          <h1 className="text-3xl font-bold mt-1">Alerts</h1>
-          <p className="text-slate-500 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold mt-1">Alerts</h1>
+          <p className="text-slate-500 mt-1 text-sm sm:text-base">
             Review issues across attendance and field tracking.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <button
             type="button"
             onClick={handleMarkAllRead}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50"
           >
             <CheckCheck size={16} />
             Mark all read
@@ -180,7 +193,7 @@ const AlertsPage = () => {
             type="button"
             onClick={handleSync}
             disabled={syncing}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-70"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-70"
           >
             <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
             Sync Alerts
@@ -188,8 +201,8 @@ const AlertsPage = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-        <div className="grid grid-cols-4 gap-4">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
@@ -267,19 +280,19 @@ const AlertsPage = () => {
           </div>
         ) : (
           <div className="divide-y">
-            {alerts.map((alert) => {
+            {pagedAlerts.map((alert) => {
               const meta = typeMeta[alert.type] || typeMeta.offline;
               const Icon = meta.icon;
 
               return (
                 <div
                   key={alert._id}
-                  className={`px-6 py-5 flex items-start gap-4 ${
+                  className={`px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-start gap-4 ${
                     alert.isRead ? "bg-white" : "bg-blue-50/40"
                   }`}
                 >
                   <div
-                    className={`w-11 h-11 rounded-xl flex items-center justify-center ${meta.color}`}
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${meta.color}`}
                   >
                     <Icon size={20} />
                   </div>
@@ -312,7 +325,7 @@ const AlertsPage = () => {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
                     <button
                       type="button"
                       onClick={() => openRelated(alert)}
@@ -345,6 +358,13 @@ const AlertsPage = () => {
             })}
           </div>
         )}
+
+        <Pagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          total={alerts.length}
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );

@@ -179,13 +179,13 @@ const ReportsPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <p className="text-blue-600 text-sm font-semibold uppercase">
             Analytics
           </p>
-          <h1 className="text-3xl font-bold mt-1">Reports</h1>
-          <p className="text-slate-500 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold mt-1">Reports</h1>
+          <p className="text-slate-500 mt-1 text-sm sm:text-base">
             Generate attendance, branch and field tracking reports.
           </p>
         </div>
@@ -193,14 +193,14 @@ const ReportsPage = () => {
         <button
           type="button"
           onClick={handleExport}
-          className="flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700"
+          className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 w-full sm:w-auto"
         >
           <Download size={18} />
           Export CSV
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
         <div className="flex flex-wrap gap-2 mb-5">
           {reportTypes.map((item) => {
             const Icon = item.icon;
@@ -223,7 +223,7 @@ const ReportsPage = () => {
           })}
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
           <div>
             <label className="block text-xs text-slate-500 mb-1">From</label>
             <input
@@ -342,8 +342,8 @@ const ReportsPage = () => {
             No report data for the selected filters.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto table-scroll">
+            <table className="w-full text-sm min-w-[720px]">
               <thead className="bg-slate-50 border-b">
                 {reportType === "attendance" && (
                   <tr className="text-left">

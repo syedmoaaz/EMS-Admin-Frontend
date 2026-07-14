@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { UserCheck, UserX, Clock3, Plane } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -10,6 +10,7 @@ import * as attendanceService from "../services/attendanceService";
 import * as branchService from "../services/branchService";
 
 const today = () => new Date().toISOString().slice(0, 10);
+const PAGE_SIZE = 10;
 
 const AttendancePage = () => {
   const [search, setSearch] = useState("");
@@ -28,6 +29,7 @@ const AttendancePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [historyRecord, setHistoryRecord] = useState(null);
+  const [page, setPage] = useState(1);
 
   const loadBranches = useCallback(async () => {
     try {
@@ -77,6 +79,15 @@ const AttendancePage = () => {
 
     return () => clearTimeout(timer);
   }, [loadData, search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, branch, method, status, date]);
+
+  const pagedRecords = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return records.slice(start, start + PAGE_SIZE);
+  }, [records, page]);
 
   const exportCsv = () => {
     if (!records.length) {
@@ -167,15 +178,15 @@ const AttendancePage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <p className="text-blue-600 text-sm font-semibold uppercase">
             Attendance Management
           </p>
 
-          <h1 className="text-3xl font-bold mt-1">Attendance</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold mt-1">Attendance</h1>
 
-          <p className="text-slate-500 mt-1">
+          <p className="text-slate-500 mt-1 text-sm sm:text-base">
             Monitor today's attendance across all branches.
           </p>
         </div>
@@ -183,13 +194,13 @@ const AttendancePage = () => {
         <button
           type="button"
           onClick={loadData}
-          className="bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl font-medium"
+          className="bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl font-medium w-full sm:w-auto"
         >
           Refresh Live
         </button>
       </div>
 
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
         {stats.map((item) => (
           <AttendanceStatsCard key={item.title} {...item} />
         ))}
@@ -217,9 +228,13 @@ const AttendancePage = () => {
       )}
 
       <AttendanceTable
-        records={records}
+        records={pagedRecords}
         loading={loading}
         onViewHistory={setHistoryRecord}
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={records.length}
+        onPageChange={setPage}
       />
 
       <AttendanceHistoryDrawer

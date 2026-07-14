@@ -8,6 +8,7 @@ import {
   Save,
   MapPinned,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 import * as settingsService from "../services/settingsService";
 
 const WEEK_DAYS = [
@@ -21,6 +22,7 @@ const WEEK_DAYS = [
 ];
 
 const SettingsPage = () => {
+  const { user, updateUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -141,22 +143,17 @@ const SettingsPage = () => {
         }),
       ]);
 
-      // refresh stored user for navbar company name
-      const stored = localStorage.getItem("ems_auth_user");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const next = {
-          ...parsed,
+      if (user) {
+        updateUser({
+          ...user,
           companyName: profile.companyName,
           name: profile.ownerName,
           ownerName: profile.ownerName,
           phone: profile.phone,
-        };
-        localStorage.setItem("ems_auth_user", JSON.stringify(next));
+        });
       }
 
       toast.success("Settings saved");
-      window.location.reload();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to save settings.");
     } finally {
@@ -204,13 +201,13 @@ const SettingsPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <p className="text-blue-600 text-sm font-semibold uppercase">
             System Settings
           </p>
-          <h1 className="text-3xl font-bold mt-1">Settings</h1>
-          <p className="text-slate-500 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold mt-1">Settings</h1>
+          <p className="text-slate-500 mt-1 text-sm sm:text-base">
             Configure company profile, timings, GPS and alert rules.
           </p>
         </div>
@@ -219,7 +216,7 @@ const SettingsPage = () => {
           type="button"
           onClick={saveProfileAndRules}
           disabled={saving}
-          className="flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-70"
+          className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-70 w-full sm:w-auto"
         >
           <Save size={18} />
           {saving ? "Saving..." : "Save Settings"}
@@ -244,7 +241,7 @@ const SettingsPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <label className="block text-sm font-medium mb-2">Company Name</label>
             <input
@@ -298,7 +295,7 @@ const SettingsPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <label className="block text-sm font-medium mb-2">Start Time</label>
             <input
@@ -405,7 +402,7 @@ const SettingsPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <label className="block text-sm font-medium mb-2">
               Refresh Interval (seconds)
@@ -529,7 +526,7 @@ const SettingsPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           <div>
             <label className="block text-sm font-medium mb-2">
               Current Password

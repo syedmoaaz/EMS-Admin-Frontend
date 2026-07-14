@@ -70,15 +70,15 @@ const BranchesPage = () => {
   return (
     <>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <p className="text-blue-600 text-sm font-semibold uppercase">
               Branch Management
             </p>
 
-            <h1 className="text-3xl font-bold mt-1">Branches</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold mt-1">Branches</h1>
 
-            <p className="text-slate-500 mt-1">
+            <p className="text-slate-500 mt-1 text-sm sm:text-base">
               Manage all company branches from one place.
             </p>
           </div>
@@ -86,7 +86,7 @@ const BranchesPage = () => {
           <button
             type="button"
             onClick={openCreate}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl font-medium shadow"
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl font-medium shadow w-full sm:w-auto"
           >
             <Plus size={18} />
             Add Branch

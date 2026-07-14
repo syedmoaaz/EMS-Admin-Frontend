@@ -148,22 +148,22 @@ const DashboardPage = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <p className="text-blue-600 font-semibold text-sm uppercase">
             Overview
           </p>
 
-          <h1 className="text-[30px] font-semibold text-slate-900 mt-1">
+          <h1 className="text-2xl sm:text-[30px] font-semibold text-slate-900 mt-1">
             {greeting}, {firstName}
           </h1>
 
-          <p className="text-slate-500 mt-1">
+          <p className="text-slate-500 mt-1 text-sm sm:text-base">
             Here's what's happening across all branches today.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <button
             type="button"
             onClick={() => navigate("/attendance")}
@@ -200,7 +200,7 @@ const DashboardPage = () => {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="bg-white rounded-xl h-80 p-5 border shadow-sm flex flex-col">
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-lg">Attendance Overview</h2>
@@ -292,7 +292,7 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="bg-white rounded-xl h-80 p-5 border shadow-sm flex flex-col">
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-lg">Live Employees</h2>

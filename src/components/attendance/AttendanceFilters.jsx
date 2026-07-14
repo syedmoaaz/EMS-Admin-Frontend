@@ -1,8 +1,4 @@
-import {
-  Search,
-  CalendarDays,
-  Download,
-} from "lucide-react";
+import { Search, CalendarDays, Download } from "lucide-react";
 
 const AttendanceFilters = ({
   search,
@@ -21,9 +17,9 @@ const AttendanceFilters = ({
   const isToday = date === new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-      <div className="grid grid-cols-12 gap-4 items-center">
-        <div className="col-span-4 relative">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 items-center">
+        <div className="relative sm:col-span-2">
           <Search
             size={18}
             className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
@@ -38,56 +34,50 @@ const AttendanceFilters = ({
           />
         </div>
 
-        <div className="col-span-2">
-          <select
-            value={branch}
-            onChange={(e) => onBranchChange?.(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Branches</option>
-            {branches.map((item) => (
-              <option key={item._id} value={item._id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <select
+          value={branch}
+          onChange={(e) => onBranchChange?.(e.target.value)}
+          className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">All Branches</option>
+          {branches.map((item) => (
+            <option key={item._id} value={item._id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
 
-        <div className="col-span-2">
-          <select
-            value={method}
-            onChange={(e) => onMethodChange?.(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Methods</option>
-            <option value="Biometric">Biometric</option>
-            <option value="GPS">GPS</option>
-            <option value="Manual">Manual</option>
-          </select>
-        </div>
+        <select
+          value={method}
+          onChange={(e) => onMethodChange?.(e.target.value)}
+          className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">All Methods</option>
+          <option value="Biometric">Biometric</option>
+          <option value="GPS">GPS</option>
+          <option value="Manual">Manual</option>
+        </select>
 
-        <div className="col-span-2">
-          <select
-            value={status}
-            onChange={(e) => onStatusChange?.(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Status</option>
-            <option value="Present">Present</option>
-            <option value="Working">Working</option>
-            <option value="Absent">Absent</option>
-            <option value="Late">Late</option>
-            <option value="On Leave">On Leave</option>
-          </select>
-        </div>
+        <select
+          value={status}
+          onChange={(e) => onStatusChange?.(e.target.value)}
+          className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">All Status</option>
+          <option value="Present">Present</option>
+          <option value="Working">Working</option>
+          <option value="Absent">Absent</option>
+          <option value="Late">Late</option>
+          <option value="On Leave">On Leave</option>
+        </select>
 
-        <div className="col-span-2 flex gap-2">
+        <div className="flex gap-2">
           <button
             type="button"
             onClick={() =>
               onDateChange?.(new Date().toISOString().slice(0, 10))
             }
-            className={`flex items-center justify-center gap-2 w-full rounded-xl border border-slate-200 py-3 hover:bg-slate-50 ${
+            className={`flex items-center justify-center gap-2 flex-1 rounded-xl border border-slate-200 py-3 hover:bg-slate-50 ${
               isToday ? "bg-blue-50 border-blue-200 text-blue-700" : ""
             }`}
           >
@@ -98,7 +88,7 @@ const AttendanceFilters = ({
           <button
             type="button"
             onClick={onExport}
-            className="w-12 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700"
+            className="w-12 shrink-0 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700"
             title="Export CSV"
           >
             <Download size={18} />
@@ -111,7 +101,7 @@ const AttendanceFilters = ({
           type="date"
           value={date}
           onChange={(e) => onDateChange?.(e.target.value)}
-          className="rounded-xl border border-slate-200 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full sm:w-auto rounded-xl border border-slate-200 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
     </div>

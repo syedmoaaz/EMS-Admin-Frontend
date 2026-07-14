@@ -65,16 +65,16 @@ const LiveMap = ({ records = [], onSelect, selectedId }) => {
   const defaultCenter = points[0] || [25.396, 68.3578];
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-[650px]">
-      <div className="flex items-center justify-between px-6 py-5 border-b">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">Live Tracking Map</h2>
-          <p className="text-sm text-slate-500 mt-1">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-[420px] sm:h-[520px] lg:h-[650px]">
+      <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b">
+        <div className="min-w-0">
+          <h2 className="text-lg sm:text-xl font-bold text-slate-900">Live Tracking Map</h2>
+          <p className="text-sm text-slate-500 mt-1 hidden sm:block">
             Monitor all field employees in real time.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-slate-600">
+        <div className="flex items-center gap-2 text-sm text-slate-600 shrink-0">
           <LocateFixed size={18} />
           {mapped.length} on map
         </div>

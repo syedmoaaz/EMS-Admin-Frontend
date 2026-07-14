@@ -29,7 +29,12 @@ const LoginPage = () => {
     setError("");
 
     if (!userId.trim() || !password) {
-      setError("Please enter your User ID and password.");
+      setError("Please enter your email and password.");
+      return;
+    }
+
+    if (!userId.includes("@")) {
+      setError("Please enter a valid email address.");
       return;
     }
 
@@ -105,7 +110,7 @@ const LoginPage = () => {
                   htmlFor="userId"
                   className="block text-sm font-medium text-slate-700 mb-2"
                 >
-                  User ID
+                  Email
                 </label>
 
                 <div className="relative">
@@ -116,10 +121,10 @@ const LoginPage = () => {
 
                   <input
                     id="userId"
-                    type="text"
+                    type="email"
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
-                    placeholder="ADMIN001"
+                    placeholder="owner@novapharma.com"
                     autoComplete="username"
                     className="w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                   />

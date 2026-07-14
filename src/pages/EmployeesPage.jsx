@@ -2,8 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search, Plus, Users, Eye, Pencil, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import AddEmployeeDrawer from "../components/employees/AddEmployeeDrawer";
+import Pagination from "../components/Pagination";
 import * as employeeService from "../services/employeeService";
 import * as branchService from "../services/branchService";
+
+const PAGE_SIZE = 10;
 
 const EmployeesPage = () => {
   const [openDrawer, setOpenDrawer] = useState(false);
@@ -16,6 +19,7 @@ const EmployeesPage = () => {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
 
   const designations = useMemo(() => {
     const fromData = [
@@ -68,6 +72,15 @@ const EmployeesPage = () => {
     return () => clearTimeout(timer);
   }, [loadEmployees]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [search, branchFilter, designationFilter, statusFilter]);
+
+  const pagedEmployees = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return employees.slice(start, start + PAGE_SIZE);
+  }, [employees, page]);
+
   const openCreate = () => {
     setEditingEmployee(null);
     setOpenDrawer(true);
@@ -108,15 +121,15 @@ const EmployeesPage = () => {
   return (
     <>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <p className="text-blue-600 text-sm font-semibold uppercase">
               Employee Management
             </p>
 
-            <h1 className="text-3xl font-bold mt-1">Employees</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold mt-1">Employees</h1>
 
-            <p className="text-slate-500 mt-1">
+            <p className="text-slate-500 mt-1 text-sm sm:text-base">
               Manage employees across all company branches.
             </p>
           </div>
@@ -124,15 +137,15 @@ const EmployeesPage = () => {
           <button
             type="button"
             onClick={openCreate}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl font-medium shadow"
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl font-medium shadow w-full sm:w-auto"
           >
             <Plus size={18} />
             Add Employee
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <div className="grid grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
             <div className="relative">
               <Search
                 size={18}
@@ -192,7 +205,8 @@ const EmployeesPage = () => {
         )}
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <table className="w-full">
+          <div className="table-scroll">
+          <table className="w-full min-w-[860px]">
             <thead className="bg-slate-50 border-b">
               <tr>
                 <th className="px-6 py-4 text-left font-semibold">Employee</th>
@@ -218,8 +232,8 @@ const EmployeesPage = () => {
                     </div>
                   </td>
                 </tr>
-              ) : employees.length > 0 ? (
-                employees.map((employee) => (
+              ) : pagedEmployees.length > 0 ? (
+                pagedEmployees.map((employee) => (
                   <tr
                     key={employee._id}
                     className="border-t hover:bg-slate-50 transition"
@@ -297,7 +311,7 @@ const EmployeesPage = () => {
               ) : (
                 <tr>
                   <td colSpan={7} className="py-20">
-                    <div className="flex flex-col items-center">
+                    <div className="flex flex-col items-center px-4">
                       <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center">
                         <Users size={36} className="text-blue-600" />
                       </div>
@@ -306,7 +320,7 @@ const EmployeesPage = () => {
                         No Employees Found
                       </h2>
 
-                      <p className="text-slate-500 mt-2">
+                      <p className="text-slate-500 mt-2 text-center">
                         Try adjusting your filters or add a new employee.
                       </p>
 
@@ -324,6 +338,14 @@ const EmployeesPage = () => {
               )}
             </tbody>
           </table>
+          </div>
+
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={employees.length}
+            onPageChange={setPage}
+          />
         </div>
       </div>
 

@@ -5,13 +5,16 @@ import {
   Search,
   CalendarDays,
   Building2,
+  Menu,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useSidebar } from "../context/SidebarContext";
 import * as alertService from "../services/alertService";
 
 const TopNavbar = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { openSidebar } = useSidebar();
   const [unreadCount, setUnreadCount] = useState(0);
 
   const initials = user?.name
@@ -22,6 +25,12 @@ const TopNavbar = () => {
     .toUpperCase() ?? "AD";
 
   const today = new Date().toLocaleDateString("en-US", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+
+  const todayFull = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     day: "numeric",
     month: "short",
@@ -44,19 +53,28 @@ const TopNavbar = () => {
   }, [loadUnread]);
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between">
-      <div className="flex items-center gap-4">
+    <header className="min-h-16 bg-white border-b border-slate-200 px-3 sm:px-4 lg:px-8 py-2 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
         <button
           type="button"
-          className="flex items-center gap-3 bg-slate-100 rounded-xl px-4 py-2 hover:bg-slate-200 transition"
+          onClick={openSidebar}
+          className="lg:hidden w-10 h-10 rounded-xl border flex items-center justify-center hover:bg-slate-50 shrink-0"
+          aria-label="Open menu"
         >
-          <Building2 size={18} className="text-blue-600" />
-          <span className="font-medium">
+          <Menu size={20} />
+        </button>
+
+        <button
+          type="button"
+          className="hidden sm:flex items-center gap-2 lg:gap-3 bg-slate-100 rounded-xl px-3 lg:px-4 py-2 hover:bg-slate-200 transition shrink-0 max-w-[180px] lg:max-w-none"
+        >
+          <Building2 size={18} className="text-blue-600 shrink-0" />
+          <span className="font-medium truncate text-sm lg:text-base">
             {user?.companyName ?? "NovaPharma Ltd."}
           </span>
         </button>
 
-        <div className="relative w-105">
+        <div className="relative flex-1 max-w-xl hidden md:block">
           <Search
             size={18}
             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
@@ -70,16 +88,21 @@ const TopNavbar = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 border rounded-xl px-4 py-2 text-sm text-slate-600">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="hidden lg:flex items-center gap-2 border rounded-xl px-4 py-2 text-sm text-slate-600">
           <CalendarDays size={18} />
+          {todayFull}
+        </div>
+
+        <div className="hidden sm:flex lg:hidden items-center gap-2 border rounded-xl px-3 py-2 text-xs text-slate-600">
+          <CalendarDays size={16} />
           {today}
         </div>
 
         <button
           type="button"
           onClick={() => navigate("/alerts")}
-          className="relative w-11 h-11 border rounded-xl flex items-center justify-center hover:bg-slate-50"
+          className="relative w-10 h-10 sm:w-11 sm:h-11 border rounded-xl flex items-center justify-center hover:bg-slate-50"
           title="Alerts"
         >
           <Bell size={20} />
@@ -92,15 +115,15 @@ const TopNavbar = () => {
 
         <Link
           to="/settings"
-          className="flex items-center gap-3 border rounded-xl px-3 py-2 hover:bg-slate-50"
+          className="flex items-center gap-2 sm:gap-3 border rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 hover:bg-slate-50"
         >
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
             {initials}
           </div>
 
-          <div>
+          <div className="hidden md:block">
             <h4 className="font-semibold text-sm">{user?.name ?? "Admin"}</h4>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 truncate max-w-[140px]">
               {user?.companyName ?? "Company Owner"}
             </p>
           </div>

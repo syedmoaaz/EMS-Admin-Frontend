@@ -2,7 +2,13 @@
 @import "leaflet/dist/leaflet.css";
 
 :root {
-  font-size: 75%;
+  font-size: 87.5%;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    font-size: 75%;
+  }
 }
 
 html, body, #root {
@@ -11,10 +17,17 @@ html, body, #root {
 
 body {
   margin: 0;
+  -webkit-font-smoothing: antialiased;
 }
 
 .leaflet-container {
   width: 100%;
   height: 100%;
   z-index: 0;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }

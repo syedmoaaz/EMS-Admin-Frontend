@@ -63,7 +63,7 @@ const AttendanceHistoryDrawer = ({ open, onClose, employee }) => {
       />
 
       <div
-        className={`fixed top-0 right-0 h-screen w-[520px] bg-white shadow-2xl z-50 transition-transform duration-300 ${
+        className={`fixed top-0 right-0 h-screen w-full max-w-[520px] bg-white shadow-2xl z-50 transition-transform duration-300 ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >

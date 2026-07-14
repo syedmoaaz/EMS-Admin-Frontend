@@ -46,9 +46,9 @@ const OnlineEmployees = ({
     `https://ui-avatars.com/api/?name=${encodeURIComponent(employee?.name || "E")}&background=2563eb&color=fff`;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm h-[650px] flex flex-col">
-      <div className="px-5 py-5 border-b">
-        <h2 className="text-xl font-bold">Live Employees</h2>
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm h-[420px] sm:h-[520px] xl:h-[650px] flex flex-col">
+      <div className="px-4 sm:px-5 py-4 sm:py-5 border-b">
+        <h2 className="text-lg sm:text-xl font-bold">Live Employees</h2>
         <p className="text-sm text-slate-500 mt-1">
           Real-time field employee tracking.
         </p>
