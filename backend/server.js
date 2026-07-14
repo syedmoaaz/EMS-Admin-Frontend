@@ -12,6 +12,7 @@ import employeeRoutes from "./routes/employeeRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import trackingRoutes from "./routes/trackingRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+import alertRoutes from "./routes/alertRoutes.js";
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.use("/api/employees", employeeRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/tracking", trackingRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/alerts", alertRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

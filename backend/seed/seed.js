@@ -8,6 +8,8 @@ import Branch from "../models/Branch.js";
 import Employee from "../models/Employee.js";
 import Attendance from "../models/Attendance.js";
 import Tracking from "../models/Tracking.js";
+import Alert from "../models/Alert.js";
+import { syncCompanyAlerts } from "../controllers/alertController.js";
 
 import { company, branches, employees, attendance, tracking } from "./data.js";
 
@@ -27,6 +29,7 @@ const run = async () => {
       Employee.deleteMany(),
       Attendance.deleteMany(),
       Tracking.deleteMany(),
+      Alert.deleteMany(),
     ]);
 
     const createdCompany = await Company.create(company);
@@ -80,6 +83,10 @@ const run = async () => {
       });
     }
     console.log(`Seeded ${tracking.length} tracking records`);
+
+    await syncCompanyAlerts(companyId);
+    const alertCount = await Alert.countDocuments({ company: companyId });
+    console.log(`Seeded / synced ${alertCount} alerts`);
 
     console.log("\nSeed complete. Login credentials:");
     console.log(`  Email:    ${company.email}`);

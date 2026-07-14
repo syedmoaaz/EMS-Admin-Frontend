@@ -17,6 +17,7 @@ import * as dashboardService from "../services/dashboardService";
 import * as attendanceService from "../services/attendanceService";
 import * as branchService from "../services/branchService";
 import * as trackingService from "../services/trackingService";
+import * as alertService from "../services/alertService";
 
 const DashboardPage = () => {
   const { user } = useAuth();
@@ -26,6 +27,7 @@ const DashboardPage = () => {
   const [attendancePreview, setAttendancePreview] = useState([]);
   const [branches, setBranches] = useState([]);
   const [liveEmployees, setLiveEmployees] = useState([]);
+  const [criticalAlerts, setCriticalAlerts] = useState([]);
   const [error, setError] = useState("");
 
   const firstName = user?.name?.split(" ")[0] || "there";
@@ -41,18 +43,27 @@ const DashboardPage = () => {
       try {
         const today = new Date().toISOString().slice(0, 10);
 
-        const [dashRes, attRes, branchRes, trackRes] = await Promise.all([
-          dashboardService.getDashboardStats(),
-          attendanceService.getAttendance({ date: today }),
-          branchService.getBranches(),
-          trackingService.getLiveTracking().catch(() => ({ data: [] })),
-        ]);
+        const [dashRes, attRes, branchRes, trackRes, alertRes] =
+          await Promise.all([
+            dashboardService.getDashboardStats(),
+            attendanceService.getAttendance({ date: today }),
+            branchService.getBranches(),
+            trackingService.getLiveTracking().catch(() => ({ data: [] })),
+            alertService
+              .getAlerts({ sync: "true", isRead: "false" })
+              .catch(() => ({ data: [] })),
+          ]);
 
         setStatsData(dashRes.data || {});
         setAttendancePreview((attRes.data || []).slice(0, 6));
         setBranches((branchRes.data || []).slice(0, 5));
         setLiveEmployees(
           (trackRes.data || []).filter((t) => t.online).slice(0, 5)
+        );
+        setCriticalAlerts(
+          (alertRes.data || [])
+            .filter((a) => a.severity === "critical" || !a.isRead)
+            .slice(0, 6)
         );
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load dashboard.");
@@ -324,25 +335,56 @@ const DashboardPage = () => {
             </div>
 
             <div className="bg-white rounded-xl h-80 p-5 border shadow-sm flex flex-col">
-              <h2 className="font-semibold text-lg">Critical Alerts</h2>
-              <div className="mt-4 flex-1 flex flex-col justify-center items-center text-center">
-                <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mb-4">
-                  <TriangleAlert size={28} className="text-red-500" />
-                </div>
-                <p className="font-semibold text-slate-800">
-                  {statsData?.activeAlerts ?? 0} offline / GPS alerts
-                </p>
-                <p className="text-sm text-slate-500 mt-2 max-w-xs">
-                  Full Alerts module comes in Phase 4. Tracking offline status is
-                  available under Live Tracking.
-                </p>
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-lg">Critical Alerts</h2>
                 <button
                   type="button"
-                  onClick={() => navigate("/live-tracking")}
-                  className="mt-4 text-sm text-blue-600 hover:underline"
+                  onClick={() => navigate("/alerts")}
+                  className="text-sm text-blue-600 hover:underline"
                 >
-                  Open Live Tracking
+                  View all
                 </button>
+              </div>
+
+              <div className="mt-4 flex-1 overflow-y-auto space-y-3">
+                {criticalAlerts.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center mb-3">
+                      <TriangleAlert size={28} className="text-green-600" />
+                    </div>
+                    <p className="font-semibold text-slate-800">No active alerts</p>
+                    <p className="text-sm text-slate-500 mt-1">
+                      Attendance and tracking look clear.
+                    </p>
+                  </div>
+                ) : (
+                  criticalAlerts.map((alert) => (
+                    <button
+                      type="button"
+                      key={alert._id}
+                      onClick={() => navigate("/alerts")}
+                      className="w-full text-left flex items-start justify-between border-b border-slate-100 pb-3 hover:bg-slate-50 rounded-lg px-1"
+                    >
+                      <div>
+                        <p className="font-medium text-sm">{alert.title}</p>
+                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
+                          {alert.message}
+                        </p>
+                      </div>
+                      <span
+                        className={`ml-2 shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          alert.severity === "critical"
+                            ? "bg-red-100 text-red-700"
+                            : alert.severity === "warning"
+                              ? "bg-orange-100 text-orange-700"
+                              : "bg-blue-100 text-blue-700"
+                        }`}
+                      >
+                        {alert.severity}
+                      </span>
+                    </button>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -354,7 +396,7 @@ const DashboardPage = () => {
                 <MapPin size={28} className="text-blue-600" />
               </div>
               <p className="text-slate-600">
-                Interactive map arrives in Phase 3 (Live Tracking).
+                Open Live Tracking for the full interactive map.
               </p>
               <button
                 type="button"
