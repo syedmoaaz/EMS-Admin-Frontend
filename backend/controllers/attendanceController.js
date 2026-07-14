@@ -5,18 +5,34 @@ import { companyQuery } from "../utils/companyScope.js";
 
 // @route  GET /api/attendance
 export const getAttendance = asyncHandler(async (req, res) => {
-  const { date, status, method } = req.query;
+  const { date, status, method, branch, search } = req.query;
   const query = companyQuery(req);
 
   if (date) query.date = date;
   if (status && status !== "all") query.status = status;
   if (method && method !== "all") query.method = method;
+  if (branch && branch !== "all") query.branch = branch;
 
-  const records = await Attendance.find(query).populate({
-    path: "employee",
-    select: "name employeeId image branch",
-    populate: { path: "branch", select: "name" },
-  });
+  let records = await Attendance.find(query)
+    .populate({
+      path: "employee",
+      select: "name employeeId image branch",
+      populate: { path: "branch", select: "name" },
+    })
+    .populate("branch", "name")
+    .sort({ createdAt: -1 });
+
+  if (search && search.trim()) {
+    const term = search.trim().toLowerCase();
+    records = records.filter((record) => {
+      const emp = record.employee;
+      if (!emp) return false;
+      return (
+        emp.name?.toLowerCase().includes(term) ||
+        emp.employeeId?.toLowerCase().includes(term)
+      );
+    });
+  }
 
   res.json({ success: true, count: records.length, data: records });
 });
@@ -32,7 +48,9 @@ export const getAttendanceStats = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: {
-      present: records.filter((r) => r.status === "Present").length,
+      present: records.filter(
+        (r) => r.status === "Present" || r.status === "Working"
+      ).length,
       absent: records.filter((r) => r.status === "Absent").length,
       late: records.filter((r) => r.status === "Late").length,
       working: records.filter((r) => r.status === "Working").length,

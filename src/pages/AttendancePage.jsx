@@ -1,53 +1,166 @@
-import {
-  UserCheck,
-  UserX,
-  Clock3,
-  Plane,
-} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { UserCheck, UserX, Clock3, Plane } from "lucide-react";
+import toast from "react-hot-toast";
 
 import AttendanceStatsCard from "../components/attendance/AttendanceStatsCard";
 import AttendanceFilters from "../components/attendance/AttendanceFilters";
 import AttendanceTable from "../components/attendance/AttendanceTable";
-import { getAttendanceStats } from "../data";
+import AttendanceHistoryDrawer from "../components/attendance/AttendanceHistoryDrawer";
+import * as attendanceService from "../services/attendanceService";
+import * as branchService from "../services/branchService";
+
+const today = () => new Date().toISOString().slice(0, 10);
 
 const AttendancePage = () => {
-  const attendanceStats = getAttendanceStats();
+  const [search, setSearch] = useState("");
+  const [branch, setBranch] = useState("all");
+  const [method, setMethod] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [date, setDate] = useState(today());
+  const [branches, setBranches] = useState([]);
+  const [records, setRecords] = useState([]);
+  const [statsData, setStatsData] = useState({
+    present: 0,
+    absent: 0,
+    late: 0,
+    onLeave: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [historyRecord, setHistoryRecord] = useState(null);
+
+  const loadBranches = useCallback(async () => {
+    try {
+      const { data } = await branchService.getBranches();
+      setBranches(data || []);
+    } catch {
+      setBranches([]);
+    }
+  }, []);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const params = { date };
+      if (search.trim()) params.search = search.trim();
+      if (branch !== "all") params.branch = branch;
+      if (method !== "all") params.method = method;
+      if (status !== "all") params.status = status;
+
+      const [listRes, statsRes] = await Promise.all([
+        attendanceService.getAttendance(params),
+        attendanceService.getAttendanceStats({ date }),
+      ]);
+
+      setRecords(listRes.data || []);
+      setStatsData(
+        statsRes.data || { present: 0, absent: 0, late: 0, onLeave: 0 }
+      );
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load attendance.");
+      setRecords([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, branch, method, status, date]);
+
+  useEffect(() => {
+    loadBranches();
+  }, [loadBranches]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadData();
+    }, search ? 300 : 0);
+
+    return () => clearTimeout(timer);
+  }, [loadData, search]);
+
+  const exportCsv = () => {
+    if (!records.length) {
+      toast.error("No records to export.");
+      return;
+    }
+
+    const headers = [
+      "Employee",
+      "Employee ID",
+      "Branch",
+      "Check In",
+      "Check Out",
+      "Hours",
+      "Method",
+      "Status",
+      "Date",
+    ];
+
+    const rows = records.map((record) => {
+      const emp = record.employee || {};
+      const branchName =
+        record.branch?.name || emp.branch?.name || "";
+      return [
+        emp.name || "",
+        emp.employeeId || "",
+        branchName,
+        record.checkIn || "",
+        record.checkOut || "",
+        record.hours || "",
+        record.method || "",
+        record.status || "",
+        record.date || date,
+      ]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+        .join(",");
+    });
+
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `attendance-${date}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exported");
+  };
 
   const stats = [
     {
       title: "Present Today",
-      value: attendanceStats.present,
+      value: statsData.present,
       icon: UserCheck,
       iconBg: "bg-green-50",
       iconColor: "text-green-600",
-      change: "+3.2%",
+      change: String(statsData.present),
       positive: true,
     },
     {
       title: "Absent Today",
-      value: attendanceStats.absent,
+      value: statsData.absent,
       icon: UserX,
       iconBg: "bg-red-50",
       iconColor: "text-red-600",
-      change: "+2",
+      change: String(statsData.absent),
       positive: false,
     },
     {
       title: "Late Arrivals",
-      value: attendanceStats.late,
+      value: statsData.late,
       icon: Clock3,
       iconBg: "bg-orange-50",
       iconColor: "text-orange-600",
-      change: "-1",
-      positive: true,
+      change: String(statsData.late),
+      positive: statsData.late === 0,
     },
     {
       title: "On Leave",
-      value: attendanceStats.onLeave,
+      value: statsData.onLeave,
       icon: Plane,
       iconBg: "bg-violet-50",
       iconColor: "text-violet-600",
-      change: "0",
+      change: String(statsData.onLeave),
       positive: true,
     },
   ];
@@ -67,7 +180,11 @@ const AttendancePage = () => {
           </p>
         </div>
 
-        <button className="bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl font-medium">
+        <button
+          type="button"
+          onClick={loadData}
+          className="bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl font-medium"
+        >
           Refresh Live
         </button>
       </div>
@@ -78,8 +195,38 @@ const AttendancePage = () => {
         ))}
       </div>
 
-      <AttendanceFilters />
-      <AttendanceTable />
+      <AttendanceFilters
+        search={search}
+        branch={branch}
+        method={method}
+        status={status}
+        date={date}
+        branches={branches}
+        onSearchChange={setSearch}
+        onBranchChange={setBranch}
+        onMethodChange={setMethod}
+        onStatusChange={setStatus}
+        onDateChange={setDate}
+        onExport={exportCsv}
+      />
+
+      {error && (
+        <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">
+          {error}
+        </div>
+      )}
+
+      <AttendanceTable
+        records={records}
+        loading={loading}
+        onViewHistory={setHistoryRecord}
+      />
+
+      <AttendanceHistoryDrawer
+        open={Boolean(historyRecord)}
+        employee={historyRecord}
+        onClose={() => setHistoryRecord(null)}
+      />
     </div>
   );
 };

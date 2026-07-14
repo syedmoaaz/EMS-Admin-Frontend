@@ -1,30 +1,71 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Search, Plus } from "lucide-react";
+import toast from "react-hot-toast";
 
 import BranchCard from "../components/branches/BranchCard";
 import AddBranchDrawer from "../components/branches/AddBranchDrawer";
-import {
-  branches,
-  employees,
-  getBranchEmployeeCount,
-} from "../data";
+import * as branchService from "../services/branchService";
 
 const BranchesPage = () => {
   const [openDrawer, setOpenDrawer] = useState(false);
+  const [editingBranch, setEditingBranch] = useState(null);
   const [search, setSearch] = useState("");
+  const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const branchList = branches
-    .map((branch) => ({
-      ...branch,
-      employees: getBranchEmployeeCount(branch.id, employees),
-    }))
-    .filter(
-      (branch) =>
-        search === "" ||
-        branch.name.toLowerCase().includes(search.toLowerCase()) ||
-        branch.city.toLowerCase().includes(search.toLowerCase()) ||
-        branch.manager.toLowerCase().includes(search.toLowerCase())
+  const loadBranches = useCallback(async (searchTerm = "") => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const params = {};
+      if (searchTerm.trim()) params.search = searchTerm.trim();
+
+      const { data } = await branchService.getBranches(params);
+      setBranches(data || []);
+    } catch (err) {
+      const message =
+        err.response?.data?.message || "Failed to load branches.";
+      setError(message);
+      setBranches([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadBranches(search);
+    }, search ? 300 : 0);
+
+    return () => clearTimeout(timer);
+  }, [search, loadBranches]);
+
+  const openCreate = () => {
+    setEditingBranch(null);
+    setOpenDrawer(true);
+  };
+
+  const openEdit = (branch) => {
+    setEditingBranch(branch);
+    setOpenDrawer(true);
+  };
+
+  const handleDelete = async (branch) => {
+    const confirmed = window.confirm(
+      `Delete branch "${branch.name}"? This cannot be undone.`
     );
+    if (!confirmed) return;
+
+    try {
+      await branchService.deleteBranch(branch._id);
+      toast.success("Branch deleted");
+      loadBranches(search);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete branch.");
+    }
+  };
 
   return (
     <>
@@ -43,7 +84,8 @@ const BranchesPage = () => {
           </div>
 
           <button
-            onClick={() => setOpenDrawer(true)}
+            type="button"
+            onClick={openCreate}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl font-medium shadow"
           >
             <Plus size={18} />
@@ -68,10 +110,26 @@ const BranchesPage = () => {
           </div>
         </div>
 
-        {branchList.length > 0 ? (
+        {error && (
+          <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-24 flex justify-center">
+            <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : branches.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {branchList.map((branch) => (
-              <BranchCard key={branch.id} {...branch} />
+            {branches.map((branch) => (
+              <BranchCard
+                key={branch._id}
+                {...branch}
+                onView={() => openEdit(branch)}
+                onEdit={() => openEdit(branch)}
+                onDelete={() => handleDelete(branch)}
+              />
             ))}
           </div>
         ) : (
@@ -88,7 +146,8 @@ const BranchesPage = () => {
               </p>
 
               <button
-                onClick={() => setOpenDrawer(true)}
+                type="button"
+                onClick={openCreate}
                 className="mt-6 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition text-white px-6 py-3 rounded-xl"
               >
                 <Plus size={18} />
@@ -101,7 +160,12 @@ const BranchesPage = () => {
 
       <AddBranchDrawer
         open={openDrawer}
-        onClose={() => setOpenDrawer(false)}
+        branch={editingBranch}
+        onClose={() => {
+          setOpenDrawer(false);
+          setEditingBranch(null);
+        }}
+        onSaved={() => loadBranches(search)}
       />
     </>
   );

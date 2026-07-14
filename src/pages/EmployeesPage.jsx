@@ -1,46 +1,109 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search, Plus, Users, Eye, Pencil, Trash2 } from "lucide-react";
+import toast from "react-hot-toast";
 import AddEmployeeDrawer from "../components/employees/AddEmployeeDrawer";
-import {
-  employees,
-  branches,
-  getBranchName,
-  getDesignations,
-} from "../data";
+import * as employeeService from "../services/employeeService";
+import * as branchService from "../services/branchService";
 
 const EmployeesPage = () => {
   const [openDrawer, setOpenDrawer] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
   const [search, setSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState("all");
   const [designationFilter, setDesignationFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [employees, setEmployees] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const designations = getDesignations();
+  const designations = useMemo(() => {
+    const fromData = [
+      ...new Set(employees.map((e) => e.designation).filter(Boolean)),
+    ];
+    return [...new Set([...employeeService.DESIGNATIONS, ...fromData])].sort();
+  }, [employees]);
 
-  const filteredEmployees = useMemo(() => {
-    return employees.filter((employee) => {
-      const matchesSearch =
-        search === "" ||
-        employee.name.toLowerCase().includes(search.toLowerCase()) ||
-        employee.employeeId.toLowerCase().includes(search.toLowerCase()) ||
-        employee.phone.includes(search);
+  const loadBranches = useCallback(async () => {
+    try {
+      const { data } = await branchService.getBranches();
+      setBranches(data || []);
+    } catch {
+      setBranches([]);
+    }
+  }, []);
 
-      const matchesBranch =
-        branchFilter === "all" ||
-        employee.branchId === Number(branchFilter);
+  const loadEmployees = useCallback(async () => {
+    setLoading(true);
+    setError("");
 
-      const matchesDesignation =
-        designationFilter === "all" ||
-        employee.designation === designationFilter;
+    try {
+      const params = {};
+      if (search.trim()) params.search = search.trim();
+      if (branchFilter !== "all") params.branch = branchFilter;
+      if (designationFilter !== "all") params.designation = designationFilter;
+      if (statusFilter !== "all") params.status = statusFilter;
 
-      const matchesStatus =
-        statusFilter === "all" || employee.status === statusFilter;
-
-      return (
-        matchesSearch && matchesBranch && matchesDesignation && matchesStatus
-      );
-    });
+      const { data } = await employeeService.getEmployees(params);
+      setEmployees(data || []);
+    } catch (err) {
+      const message =
+        err.response?.data?.message || "Failed to load employees.";
+      setError(message);
+      setEmployees([]);
+    } finally {
+      setLoading(false);
+    }
   }, [search, branchFilter, designationFilter, statusFilter]);
+
+  useEffect(() => {
+    loadBranches();
+  }, [loadBranches]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadEmployees();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [loadEmployees]);
+
+  const openCreate = () => {
+    setEditingEmployee(null);
+    setOpenDrawer(true);
+  };
+
+  const openEdit = (employee) => {
+    setEditingEmployee(employee);
+    setOpenDrawer(true);
+  };
+
+  const handleDelete = async (employee) => {
+    const confirmed = window.confirm(
+      `Delete employee "${employee.name}"? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await employeeService.deleteEmployee(employee._id);
+      toast.success("Employee deleted");
+      loadEmployees();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete employee.");
+    }
+  };
+
+  const getBranchName = (employee) => {
+    if (employee.branch && typeof employee.branch === "object") {
+      return employee.branch.name || "—";
+    }
+    const match = branches.find((b) => b._id === employee.branch);
+    return match?.name || "—";
+  };
+
+  const avatarSrc = (employee) =>
+    employee.image ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.name || "E")}&background=2563eb&color=fff`;
 
   return (
     <>
@@ -59,7 +122,8 @@ const EmployeesPage = () => {
           </div>
 
           <button
-            onClick={() => setOpenDrawer(true)}
+            type="button"
+            onClick={openCreate}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl font-medium shadow"
           >
             <Plus size={18} />
@@ -90,7 +154,7 @@ const EmployeesPage = () => {
             >
               <option value="all">All Branches</option>
               {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
+                <option key={branch._id} value={branch._id}>
                   {branch.name}
                 </option>
               ))}
@@ -121,6 +185,12 @@ const EmployeesPage = () => {
           </div>
         </div>
 
+        {error && (
+          <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <table className="w-full">
             <thead className="bg-slate-50 border-b">
@@ -135,23 +205,29 @@ const EmployeesPage = () => {
                 <th className="px-6 py-4 text-left font-semibold">Phone</th>
                 <th className="px-6 py-4 text-left font-semibold">Branch</th>
                 <th className="px-6 py-4 text-left font-semibold">Status</th>
-                <th className="px-6 py-4 text-center font-semibold">
-                  Actions
-                </th>
+                <th className="px-6 py-4 text-center font-semibold">Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {filteredEmployees.length > 0 ? (
-                filteredEmployees.map((employee) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="py-20">
+                    <div className="flex justify-center">
+                      <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  </td>
+                </tr>
+              ) : employees.length > 0 ? (
+                employees.map((employee) => (
                   <tr
-                    key={employee.id}
+                    key={employee._id}
                     className="border-t hover:bg-slate-50 transition"
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <img
-                          src={employee.image}
+                          src={avatarSrc(employee)}
                           alt={employee.name}
                           className="w-11 h-11 rounded-full object-cover"
                         />
@@ -175,9 +251,7 @@ const EmployeesPage = () => {
                       {employee.phone}
                     </td>
 
-                    <td className="px-6 py-4">
-                      {getBranchName(employee.branchId)}
-                    </td>
+                    <td className="px-6 py-4">{getBranchName(employee)}</td>
 
                     <td className="px-6 py-4">
                       <span
@@ -193,15 +267,27 @@ const EmployeesPage = () => {
 
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
-                        <button className="w-9 h-9 rounded-xl border hover:bg-slate-100 inline-flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(employee)}
+                          className="w-9 h-9 rounded-xl border hover:bg-slate-100 inline-flex items-center justify-center"
+                        >
                           <Eye size={16} />
                         </button>
 
-                        <button className="w-9 h-9 rounded-xl border hover:bg-slate-100 inline-flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(employee)}
+                          className="w-9 h-9 rounded-xl border hover:bg-slate-100 inline-flex items-center justify-center"
+                        >
                           <Pencil size={16} />
                         </button>
 
-                        <button className="w-9 h-9 rounded-xl border hover:bg-red-50 text-red-600 inline-flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(employee)}
+                          className="w-9 h-9 rounded-xl border hover:bg-red-50 text-red-600 inline-flex items-center justify-center"
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -225,7 +311,8 @@ const EmployeesPage = () => {
                       </p>
 
                       <button
-                        onClick={() => setOpenDrawer(true)}
+                        type="button"
+                        onClick={openCreate}
                         className="mt-6 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl"
                       >
                         <Plus size={18} />
@@ -242,7 +329,13 @@ const EmployeesPage = () => {
 
       <AddEmployeeDrawer
         open={openDrawer}
-        onClose={() => setOpenDrawer(false)}
+        employee={editingEmployee}
+        branches={branches}
+        onClose={() => {
+          setOpenDrawer(false);
+          setEditingEmployee(null);
+        }}
+        onSaved={loadEmployees}
       />
     </>
   );
