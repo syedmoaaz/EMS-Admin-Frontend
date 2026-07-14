@@ -52,12 +52,12 @@ export const attendance = [
 ];
 
 export const tracking = [
-  { employeeRef: 4, status: "Moving", battery: "78%", speed: "24 km/h", location: "Clifton, Karachi", online: true },
-  { employeeRef: 5, status: "Stationary", battery: "63%", speed: "0 km/h", location: "DHA Phase 6, Karachi", online: true },
-  { employeeRef: 6, status: "Moving", battery: "85%", speed: "32 km/h", location: "Shahrah-e-Faisal, Karachi", online: true },
-  { employeeRef: 8, status: "Moving", battery: "71%", speed: "18 km/h", location: "Hyderabad, Sindh", online: true },
-  { employeeRef: 9, status: "GPS Disabled", battery: "51%", speed: "--", location: "--", online: false },
-  { employeeRef: 11, status: "Offline", battery: "34%", speed: "--", location: "--", online: false },
-  { employeeRef: 13, status: "Moving", battery: "92%", speed: "28 km/h", location: "Larkana, Sindh", online: true },
-  { employeeRef: 14, status: "Stationary", battery: "67%", speed: "0 km/h", location: "Larkana, Sindh", online: true },
+  { employeeRef: 4, status: "Moving", battery: "78%", speed: "24 km/h", location: "Clifton, Karachi", online: true, lat: 24.8138, lng: 67.0299 },
+  { employeeRef: 5, status: "Stationary", battery: "63%", speed: "0 km/h", location: "DHA Phase 6, Karachi", online: true, lat: 24.8045, lng: 67.067 },
+  { employeeRef: 6, status: "Moving", battery: "85%", speed: "32 km/h", location: "Shahrah-e-Faisal, Karachi", online: true, lat: 24.8738, lng: 67.0914 },
+  { employeeRef: 8, status: "Moving", battery: "71%", speed: "18 km/h", location: "Hyderabad, Sindh", online: true, lat: 25.396, lng: 68.3578 },
+  { employeeRef: 9, status: "GPS Disabled", battery: "51%", speed: "--", location: "--", online: false, lat: null, lng: null },
+  { employeeRef: 11, status: "Offline", battery: "34%", speed: "--", location: "--", online: false, lat: null, lng: null },
+  { employeeRef: 13, status: "Moving", battery: "92%", speed: "28 km/h", location: "Larkana, Sindh", online: true, lat: 27.559, lng: 68.2123 },
+  { employeeRef: 14, status: "Stationary", battery: "67%", speed: "0 km/h", location: "Larkana, Sindh", online: true, lat: 27.5612, lng: 68.2085 },
 ];

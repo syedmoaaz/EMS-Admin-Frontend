@@ -9,3 +9,8 @@ export const getTrackingStats = async () => {
   const { data } = await api.get("/tracking/stats");
   return data;
 };
+
+export const getEmployeeTracking = async (employeeId) => {
+  const { data } = await api.get(`/tracking/${employeeId}`);
+  return data;
+};
