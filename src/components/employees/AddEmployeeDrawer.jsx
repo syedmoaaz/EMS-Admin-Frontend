@@ -227,6 +227,10 @@ const AddEmployeeDrawer = ({
                 className="w-full border rounded-xl px-4 py-3"
                 placeholder="EMP-0001"
               />
+              <p className="text-xs text-slate-500 mt-1.5">
+                Use the same ID as the biometric machine User ID so punches map
+                correctly.
+              </p>
             </div>
 
             <div>

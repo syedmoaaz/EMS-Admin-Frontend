@@ -1,0 +1,19 @@
+{
+  "name": "ems-branch-agent",
+  "version": "1.0.0",
+  "description": "MediTrack branch biometric agent — pulls ZKTeco punches and uploads to EMS",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "sync": "node src/cli.js",
+    "dev:cli": "node src/cli.js --once"
+  },
+  "dependencies": {},
+  "optionalDependencies": {
+    "zklib": "^0.2.0"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0"
+  }
+}

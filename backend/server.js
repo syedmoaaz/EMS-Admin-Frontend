@@ -15,6 +15,7 @@ import dashboardRoutes from "./routes/dashboardRoutes.js";
 import alertRoutes from "./routes/alertRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
+import deviceRoutes from "./routes/deviceRoutes.js";
 
 dotenv.config();
 
@@ -22,11 +23,15 @@ const app = express();
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Allow browser admin + Electron/agent requests (no Origin header)
+      if (!origin) return callback(null, true);
+      return callback(null, true);
+    },
     credentials: true,
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: "2mb" }));
 app.use(morgan("dev"));
 
 app.get("/api/health", (req, res) =>
@@ -42,6 +47,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/device", deviceRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

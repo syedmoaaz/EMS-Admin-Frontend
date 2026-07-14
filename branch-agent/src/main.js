@@ -1,0 +1,130 @@
+import {
+  app,
+  BrowserWindow,
+  Tray,
+  Menu,
+  nativeImage,
+  ipcMain,
+} from "electron";
+import path from "path";
+import { fileURLToPath } from "url";
+import { loadConfig, saveConfig, getConfigPath } from "./config.js";
+import {
+  startAgentLoop,
+  stopAgentLoop,
+  getAgentState,
+  runSyncCycle,
+} from "./sync.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+let tray = null;
+let settingsWin = null;
+
+const createSettingsWindow = () => {
+  if (settingsWin) {
+    settingsWin.focus();
+    return;
+  }
+
+  settingsWin = new BrowserWindow({
+    width: 480,
+    height: 620,
+    resizable: false,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  settingsWin.loadFile(path.join(__dirname, "../renderer/index.html"));
+  settingsWin.on("closed", () => {
+    settingsWin = null;
+  });
+};
+
+const updateTrayMenu = () => {
+  const state = getAgentState();
+  const config = loadConfig();
+  const label = state.branchName
+    ? `Branch: ${state.branchName}`
+    : "Branch agent";
+
+  const menu = Menu.buildFromTemplate([
+    { label, enabled: false },
+    {
+      label: state.lastSyncAt
+        ? `Last sync: ${new Date(state.lastSyncAt).toLocaleString()}`
+        : "Not synced yet",
+      enabled: false,
+    },
+    {
+      label: state.lastError ? `Error: ${state.lastError.slice(0, 40)}` : "Status: OK",
+      enabled: false,
+    },
+    { type: "separator" },
+    {
+      label: "Sync now (catch-up today)",
+      click: async () => {
+        try {
+          await runSyncCycle({ catchUp: true });
+          updateTrayMenu();
+        } catch (err) {
+          console.error(err);
+          updateTrayMenu();
+        }
+      },
+    },
+    {
+      label: "Settings",
+      click: () => createSettingsWindow(),
+    },
+    { type: "separator" },
+    {
+      label: "Quit",
+      click: () => {
+        stopAgentLoop();
+        app.quit();
+      },
+    },
+  ]);
+
+  tray?.setToolTip(
+    `MediTrack Agent — ${config.deviceIp || "no device"}`
+  );
+  tray?.setContextMenu(menu);
+};
+
+app.whenReady().then(() => {
+  const config = loadConfig();
+  if (config.openAtLogin) {
+    app.setLoginItemSettings({ openAtLogin: true, openAsHidden: true });
+  }
+
+  const icon = nativeImage.createEmpty();
+  tray = new Tray(icon);
+  updateTrayMenu();
+
+  ipcMain.handle("get-config", () => loadConfig());
+  ipcMain.handle("save-config", (_e, next) => {
+    const saved = saveConfig(next);
+    if (saved.openAtLogin) {
+      app.setLoginItemSettings({ openAtLogin: true, openAsHidden: true });
+    }
+    return saved;
+  });
+  ipcMain.handle("get-state", () => getAgentState());
+  ipcMain.handle("get-config-path", () => getConfigPath());
+  ipcMain.handle("sync-now", async () => runSyncCycle({ catchUp: true }));
+
+  if (!config.deviceSecret) {
+    createSettingsWindow();
+  }
+
+  startAgentLoop(() => updateTrayMenu()).catch(() => updateTrayMenu());
+});
+
+app.on("window-all-closed", (e) => {
+  e.preventDefault();
+});

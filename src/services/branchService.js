@@ -24,3 +24,18 @@ export const deleteBranch = async (id) => {
   const { data } = await api.delete(`/branches/${id}`);
   return data;
 };
+
+export const getBranchDevice = async (id) => {
+  const { data } = await api.get(`/branches/${id}/device`);
+  return data;
+};
+
+export const generateBranchDeviceSecret = async (id) => {
+  const { data } = await api.post(`/branches/${id}/device-secret`);
+  return data;
+};
+
+export const revokeBranchDeviceSecret = async (id) => {
+  const { data } = await api.delete(`/branches/${id}/device-secret`);
+  return data;
+};

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { X, Building2 } from "lucide-react";
 import toast from "react-hot-toast";
 import * as branchService from "../../services/branchService";
+import BranchDevicePanel from "./BranchDevicePanel";
 
 const emptyForm = {
   name: "",
@@ -240,6 +241,10 @@ const AddBranchDrawer = ({ open, onClose, branch = null, onSaved }) => {
               </select>
             </div>
           </div>
+
+          {isEdit && (
+            <BranchDevicePanel branchId={branch._id} open={open} />
+          )}
 
           {error && (
             <div className="mt-5 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">

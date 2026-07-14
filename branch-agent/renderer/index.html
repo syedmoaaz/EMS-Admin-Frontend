@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MediTrack Branch Agent</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Branch Agent</h1>
+      <p class="sub">
+        Paste this branch&apos;s device secret only. Never reuse secrets across
+        branches.
+      </p>
+
+      <form id="form">
+        <label>
+          Backend API URL
+          <input id="apiUrl" type="text" placeholder="http://localhost:5000/api" />
+        </label>
+
+        <label>
+          Device secret
+          <input id="deviceSecret" type="password" placeholder="ems_dev_..." />
+        </label>
+
+        <label>
+          Device IP (K50)
+          <input id="deviceIp" type="text" placeholder="192.168.1.201" />
+        </label>
+
+        <label>
+          Device port
+          <input id="devicePort" type="number" value="4370" />
+        </label>
+
+        <label>
+          Poll interval (seconds)
+          <input id="pollIntervalSeconds" type="number" value="45" min="15" />
+        </label>
+
+        <label>
+          Device mode
+          <select id="deviceMode">
+            <option value="mock">Mock (API test)</option>
+            <option value="zk">ZKTeco LAN pull</option>
+          </select>
+        </label>
+
+        <label class="row">
+          <input id="openAtLogin" type="checkbox" checked />
+          Start when Windows starts
+        </label>
+
+        <p id="path" class="muted"></p>
+        <p id="status" class="status"></p>
+
+        <div class="actions">
+          <button type="submit">Save</button>
+          <button type="button" id="syncBtn">Sync now</button>
+        </div>
+      </form>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>
