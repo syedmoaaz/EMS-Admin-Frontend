@@ -39,3 +39,4 @@ Every request sends `X-Device-Secret`. Backend stamps `company` + `branch` from 
 ## Late boot
 
 On start the agent always **catch-up syncs today’s punches** from the device, then polls on an interval. Enable “Start when Windows starts” in Settings (`openAtLogin`).
+ later work
