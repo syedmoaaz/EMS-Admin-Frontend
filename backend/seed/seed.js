@@ -22,6 +22,9 @@ const run = async () => {
     await connectDB();
 
     console.log("Clearing existing collections...");
+    const BranchDevice = (await import("../models/BranchDevice.js")).default;
+    const AttendanceLog = (await import("../models/AttendanceLog.js")).default;
+
     await Promise.all([
       Company.deleteMany(),
       Settings.deleteMany(),
@@ -30,6 +33,8 @@ const run = async () => {
       Attendance.deleteMany(),
       Tracking.deleteMany(),
       Alert.deleteMany(),
+      BranchDevice.deleteMany(),
+      AttendanceLog.deleteMany(),
     ]);
 
     const createdCompany = await Company.create(company);

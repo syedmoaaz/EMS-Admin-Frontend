@@ -10,6 +10,16 @@ const branchSchema = new mongoose.Schema(
     },
     name: { type: String, required: true, trim: true },
     code: { type: String, trim: true, uppercase: true },
+    /** Short city code for employee IDs, e.g. THT, KHI, SKR */
+    cityCode: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+      minlength: 2,
+      maxlength: 5,
+      match: [/^[A-Z]{2,5}$/, "City code must be 2–5 letters only"],
+    },
     address: { type: String, trim: true },
     city: { type: String, trim: true },
     manager: { type: String, trim: true },
@@ -25,5 +35,6 @@ const branchSchema = new mongoose.Schema(
 );
 
 branchSchema.index({ company: 1, code: 1 }, { unique: true, sparse: true });
+branchSchema.index({ company: 1, cityCode: 1 });
 
 export default mongoose.model("Branch", branchSchema);

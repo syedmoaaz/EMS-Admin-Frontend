@@ -2,6 +2,7 @@ import Attendance from "../models/Attendance.js";
 import AttendanceLog from "../models/AttendanceLog.js";
 import Employee from "../models/Employee.js";
 import Settings from "../models/Settings.js";
+import { normalizeDevicePin } from "../utils/employeeIds.js";
 
 const pad = (n) => String(n).padStart(2, "0");
 
@@ -42,7 +43,12 @@ const computeHours = (first, last) => {
   return `${h}h ${m}m`;
 };
 
-const resolveStatus = ({ firstPunch, officeStart, lateThresholdMinutes, hasCheckout }) => {
+const resolveStatus = ({
+  firstPunch,
+  officeStart,
+  lateThresholdMinutes,
+  hasCheckout,
+}) => {
   const { hours, minutes } = parseOfficeStart(officeStart);
   const threshold = new Date(firstPunch);
   threshold.setHours(hours, minutes + lateThresholdMinutes, 0, 0);
@@ -55,34 +61,35 @@ const resolveStatus = ({ firstPunch, officeStart, lateThresholdMinutes, hasCheck
 };
 
 /**
- * Find employee by company + employeeId (exact uppercase match).
- * Same ID must be enrolled on the biometric device.
+ * Match K50 User ID / device PIN to an EMS employee.
+ * Payload may send employeeId, deviceUserId, or devicePin — all mean the numeric PIN.
  */
-export const findEmployeeByDeviceId = async (companyId, employeeId) => {
-  const normalized = String(employeeId || "").trim().toUpperCase();
-  if (!normalized) return null;
+export const findEmployeeByDevicePin = async (companyId, rawPin) => {
+  const devicePin = normalizeDevicePin(rawPin);
+  if (!devicePin) return null;
 
   return Employee.findOne({
     company: companyId,
-    employeeId: normalized,
+    devicePin,
     status: "Active",
   });
 };
 
 /**
- * Recompute daily Attendance for one employee/branch/date from AttendanceLog.
+ * Recompute daily Attendance for one devicePin/branch/date from AttendanceLog.
+ * AttendanceLog.employeeId stores the device PIN string from the machine.
  */
 export const deriveDailyAttendance = async ({
   companyId,
   branchId,
-  employeeId,
+  employeeId: devicePinKey,
   date,
 }) => {
-  const normalizedId = String(employeeId).trim().toUpperCase();
+  const devicePin = normalizeDevicePin(devicePinKey);
   const logs = await AttendanceLog.find({
     company: companyId,
     branch: branchId,
-    employeeId: normalizedId,
+    employeeId: devicePin,
     date,
   }).sort({ punchedAt: 1 });
 
@@ -90,7 +97,7 @@ export const deriveDailyAttendance = async ({
 
   const employee =
     logs.find((l) => l.employee)?.employee ||
-    (await findEmployeeByDeviceId(companyId, normalizedId))?._id;
+    (await findEmployeeByDevicePin(companyId, devicePin))?._id;
 
   if (!employee) {
     return null;
@@ -133,6 +140,7 @@ export const deriveDailyAttendance = async ({
 
 /**
  * Ingest a batch of punches for a branch (company/branch already authenticated).
+ * Punch identity from device is the numeric PIN (not EMS employeeId like THT-1).
  */
 export const ingestPunches = async ({
   companyId,
@@ -149,29 +157,32 @@ export const ingestPunches = async ({
     errors: [],
   };
 
-  const touched = new Map(); // key: employeeId|date
+  const touched = new Map();
 
   for (const punch of punches) {
     try {
-      const employeeId = String(punch.employeeId || punch.deviceUserId || "")
-        .trim()
-        .toUpperCase();
+      const devicePin = normalizeDevicePin(
+        punch.devicePin || punch.deviceUserId || punch.employeeId || ""
+      );
       const punchedAt = new Date(punch.punchedAt || punch.timestamp);
 
-      if (!employeeId || Number.isNaN(punchedAt.getTime())) {
-        summary.errors.push({ punch, message: "Invalid employeeId or punchedAt" });
+      if (!devicePin || Number.isNaN(punchedAt.getTime())) {
+        summary.errors.push({
+          punch,
+          message: "Invalid devicePin/employeeId or punchedAt",
+        });
         continue;
       }
 
       const date = punch.date || toDateKey(punchedAt);
-      const employee = await findEmployeeByDeviceId(companyId, employeeId);
+      const employee = await findEmployeeByDevicePin(companyId, devicePin);
 
       try {
         await AttendanceLog.create({
           company: companyId,
           branch: branchId,
           employee: employee?._id || null,
-          employeeId,
+          employeeId: devicePin, // store PIN in log key field
           punchedAt,
           date,
           deviceSerial: deviceSerial || punch.deviceSerial || "",
@@ -180,13 +191,13 @@ export const ingestPunches = async ({
         });
         summary.inserted += 1;
         if (!employee) summary.unmatched += 1;
-        touched.set(`${employeeId}|${date}`, { employeeId, date });
+        touched.set(`${devicePin}|${date}`, { employeeId: devicePin, date });
       } catch (err) {
         if (err?.code === 11000) {
           summary.duplicates += 1;
-          touched.set(`${employeeId}|${date}`, { employeeId, date });
+          touched.set(`${devicePin}|${date}`, { employeeId: devicePin, date });
         } else {
-          summary.errors.push({ employeeId, message: err.message });
+          summary.errors.push({ devicePin, message: err.message });
         }
       }
     } catch (err) {

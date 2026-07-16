@@ -2,6 +2,20 @@ import Branch from "../models/Branch.js";
 import Employee from "../models/Employee.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { companyQuery } from "../utils/companyScope.js";
+import { normalizeCityCode } from "../utils/employeeIds.js";
+
+const resolveCityCode = (body) => {
+  if (body.cityCode) return normalizeCityCode(body.cityCode);
+  if (body.code) {
+    const fromCode = normalizeCityCode(String(body.code).split("-")[0]);
+    if (fromCode.length >= 2) return fromCode;
+  }
+  if (body.city) {
+    const fromCity = normalizeCityCode(body.city).slice(0, 3);
+    if (fromCity.length >= 2) return fromCity;
+  }
+  return "";
+};
 
 // @route  GET /api/branches
 export const getBranches = asyncHandler(async (req, res) => {
@@ -10,7 +24,12 @@ export const getBranches = asyncHandler(async (req, res) => {
 
   if (search) {
     const regex = new RegExp(search, "i");
-    query.$or = [{ name: regex }, { city: regex }, { manager: regex }];
+    query.$or = [
+      { name: regex },
+      { city: regex },
+      { cityCode: regex },
+      { manager: regex },
+    ];
   }
 
   const branches = await Branch.find(query).sort({ createdAt: -1 }).lean();
@@ -43,8 +62,15 @@ export const getBranch = asyncHandler(async (req, res) => {
 
 // @route  POST /api/branches
 export const createBranch = asyncHandler(async (req, res) => {
+  const cityCode = resolveCityCode(req.body);
+  if (!cityCode || cityCode.length < 2) {
+    res.status(400);
+    throw new Error("City code is required (2–5 letters, e.g. THT, KHI)");
+  }
+
   const branch = await Branch.create({
     ...req.body,
+    cityCode,
     company: req.companyId,
   });
 
@@ -53,9 +79,27 @@ export const createBranch = asyncHandler(async (req, res) => {
 
 // @route  PUT /api/branches/:id
 export const updateBranch = asyncHandler(async (req, res) => {
+  const updates = { ...req.body };
+  if (
+    updates.cityCode !== undefined ||
+    updates.code !== undefined ||
+    updates.city !== undefined
+  ) {
+    const cityCode = resolveCityCode({
+      ...updates,
+      cityCode: updates.cityCode,
+    });
+    if (cityCode) updates.cityCode = cityCode;
+  }
+
+  if (updates.cityCode !== undefined && updates.cityCode.length < 2) {
+    res.status(400);
+    throw new Error("City code is required (2–5 letters, e.g. THT, KHI)");
+  }
+
   const branch = await Branch.findOneAndUpdate(
     companyQuery(req, { _id: req.params.id }),
-    req.body,
+    updates,
     { new: true, runValidators: true }
   );
 

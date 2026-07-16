@@ -2,6 +2,15 @@ import Employee from "../models/Employee.js";
 import Branch from "../models/Branch.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { companyQuery } from "../utils/companyScope.js";
+import {
+  isValidDevicePin,
+  isValidEmployeeId,
+  nextDevicePin,
+  nextEmployeeIdForCity,
+  normalizeCityCode,
+  normalizeDevicePin,
+  normalizeEmployeeId,
+} from "../utils/employeeIds.js";
 
 const verifyBranchBelongsToCompany = async (branchId, companyId, res) => {
   const branch = await Branch.findOne({ _id: branchId, company: companyId });
@@ -28,12 +37,13 @@ export const getEmployees = asyncHandler(async (req, res) => {
     query.$or = [
       { name: regex },
       { employeeId: regex },
+      { devicePin: regex },
       { phone: regex },
     ];
   }
 
   const employees = await Employee.find(query)
-    .populate("branch", "name city")
+    .populate("branch", "name city cityCode")
     .sort({ createdAt: -1 });
 
   res.json({ success: true, count: employees.length, data: employees });
@@ -43,7 +53,7 @@ export const getEmployees = asyncHandler(async (req, res) => {
 export const getEmployee = asyncHandler(async (req, res) => {
   const employee = await Employee.findOne(
     companyQuery(req, { _id: req.params.id })
-  ).populate("branch", "name city");
+  ).populate("branch", "name city cityCode");
 
   if (!employee) {
     res.status(404);
@@ -55,14 +65,61 @@ export const getEmployee = asyncHandler(async (req, res) => {
 
 // @route  POST /api/employees
 export const createEmployee = asyncHandler(async (req, res) => {
-  await verifyBranchBelongsToCompany(req.body.branch, req.companyId, res);
+  const branch = await verifyBranchBelongsToCompany(
+    req.body.branch,
+    req.companyId,
+    res
+  );
 
-  const employee = await Employee.create({
-    ...req.body,
-    company: req.companyId,
-  });
+  let employeeId = normalizeEmployeeId(req.body.employeeId);
+  let devicePin = normalizeDevicePin(req.body.devicePin);
 
-  res.status(201).json({ success: true, data: employee });
+  if (!employeeId) {
+    employeeId = await nextEmployeeIdForCity(
+      req.companyId,
+      branch.cityCode || normalizeCityCode(branch.code?.split("-")[0])
+    );
+  }
+
+  if (!isValidEmployeeId(employeeId)) {
+    res.status(400);
+    throw new Error(
+      "Employee ID must look like CITY-n (e.g. THT-1). No leading zeros."
+    );
+  }
+
+  if (!devicePin) {
+    devicePin = await nextDevicePin(req.companyId);
+  }
+
+  if (!isValidDevicePin(devicePin)) {
+    res.status(400);
+    throw new Error(
+      "Device PIN must be digits only with no leading zero (K50 rule)."
+    );
+  }
+
+  try {
+    const employee = await Employee.create({
+      ...req.body,
+      employeeId,
+      devicePin,
+      company: req.companyId,
+    });
+
+    res.status(201).json({ success: true, data: employee });
+  } catch (err) {
+    if (err?.code === 11000) {
+      res.status(400);
+      const field = Object.keys(err.keyPattern || {})[0] || "field";
+      throw new Error(
+        field === "devicePin"
+          ? "Device PIN already in use for this company"
+          : "Employee ID already in use for this company"
+      );
+    }
+    throw err;
+  }
 });
 
 // @route  PUT /api/employees/:id
@@ -71,18 +128,53 @@ export const updateEmployee = asyncHandler(async (req, res) => {
     await verifyBranchBelongsToCompany(req.body.branch, req.companyId, res);
   }
 
-  const employee = await Employee.findOneAndUpdate(
-    companyQuery(req, { _id: req.params.id }),
-    req.body,
-    { new: true, runValidators: true }
-  );
+  const updates = { ...req.body };
 
-  if (!employee) {
-    res.status(404);
-    throw new Error("Employee not found");
+  if (updates.employeeId !== undefined) {
+    updates.employeeId = normalizeEmployeeId(updates.employeeId);
+    if (!isValidEmployeeId(updates.employeeId)) {
+      res.status(400);
+      throw new Error(
+        "Employee ID must look like CITY-n (e.g. THT-1). No leading zeros."
+      );
+    }
   }
 
-  res.json({ success: true, data: employee });
+  if (updates.devicePin !== undefined) {
+    updates.devicePin = normalizeDevicePin(updates.devicePin);
+    if (!isValidDevicePin(updates.devicePin)) {
+      res.status(400);
+      throw new Error(
+        "Device PIN must be digits only with no leading zero (K50 rule)."
+      );
+    }
+  }
+
+  try {
+    const employee = await Employee.findOneAndUpdate(
+      companyQuery(req, { _id: req.params.id }),
+      updates,
+      { new: true, runValidators: true }
+    );
+
+    if (!employee) {
+      res.status(404);
+      throw new Error("Employee not found");
+    }
+
+    res.json({ success: true, data: employee });
+  } catch (err) {
+    if (err?.code === 11000) {
+      res.status(400);
+      const field = Object.keys(err.keyPattern || {})[0] || "field";
+      throw new Error(
+        field === "devicePin"
+          ? "Device PIN already in use for this company"
+          : "Employee ID already in use for this company"
+      );
+    }
+    throw err;
+  }
 });
 
 // @route  DELETE /api/employees/:id
