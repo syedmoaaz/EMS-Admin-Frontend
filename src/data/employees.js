@@ -7,7 +7,7 @@ export const ROLES = {
 export const employees = [
   {
     id: 1,
-    employeeId: "EMP-0001",
+    employeeId: "HO-1",
     name: "Ahmed Raza",
     phone: "03001234567",
     image: "https://i.pravatar.cc/150?img=12",
@@ -20,7 +20,7 @@ export const employees = [
   },
   {
     id: 2,
-    employeeId: "EMP-0002",
+    employeeId: "HO-2",
     name: "Sara Malik",
     phone: "03011234568",
     image: "https://i.pravatar.cc/150?img=5",
@@ -33,7 +33,7 @@ export const employees = [
   },
   {
     id: 3,
-    employeeId: "EMP-0003",
+    employeeId: "HO-3",
     name: "Usman Ali",
     phone: "03021234569",
     image: "https://i.pravatar.cc/150?img=33",
@@ -46,7 +46,7 @@ export const employees = [
   },
   {
     id: 4,
-    employeeId: "EMP-0004",
+    employeeId: "KHI-1",
     name: "Ali Khan",
     phone: "03031234570",
     image: "https://i.pravatar.cc/150?img=18",
@@ -59,7 +59,7 @@ export const employees = [
   },
   {
     id: 5,
-    employeeId: "EMP-0005",
+    employeeId: "KHI-2",
     name: "Hassan Raza",
     phone: "03041234571",
     image: "https://i.pravatar.cc/150?img=52",
@@ -72,7 +72,7 @@ export const employees = [
   },
   {
     id: 6,
-    employeeId: "EMP-0006",
+    employeeId: "KHI-3",
     name: "Fahad Mehmood",
     phone: "03051234572",
     image: "https://i.pravatar.cc/150?img=60",
@@ -85,7 +85,7 @@ export const employees = [
   },
   {
     id: 7,
-    employeeId: "EMP-0007",
+    employeeId: "HYD-1",
     name: "Bilal Ahmed",
     phone: "03061234573",
     image: "https://i.pravatar.cc/150?img=25",
@@ -98,7 +98,7 @@ export const employees = [
   },
   {
     id: 8,
-    employeeId: "EMP-0008",
+    employeeId: "HYD-2",
     name: "Imran Shah",
     phone: "03071234574",
     image: "https://i.pravatar.cc/150?img=15",
@@ -111,7 +111,7 @@ export const employees = [
   },
   {
     id: 9,
-    employeeId: "EMP-0009",
+    employeeId: "HYD-3",
     name: "Tariq Hussain",
     phone: "03081234575",
     image: "https://i.pravatar.cc/150?img=32",
@@ -124,7 +124,7 @@ export const employees = [
   },
   {
     id: 10,
-    employeeId: "EMP-0010",
+    employeeId: "SKR-1",
     name: "Zain Abbas",
     phone: "03091234576",
     image: "https://i.pravatar.cc/150?img=68",
@@ -137,7 +137,7 @@ export const employees = [
   },
   {
     id: 11,
-    employeeId: "EMP-0011",
+    employeeId: "SKR-2",
     name: "Kamran Siddiqui",
     phone: "03101234577",
     image: "https://i.pravatar.cc/150?img=41",
@@ -150,7 +150,7 @@ export const employees = [
   },
   {
     id: 12,
-    employeeId: "EMP-0012",
+    employeeId: "LKN-1",
     name: "Danish Qureshi",
     phone: "03111234578",
     image: "https://i.pravatar.cc/150?img=56",
@@ -163,7 +163,7 @@ export const employees = [
   },
   {
     id: 13,
-    employeeId: "EMP-0013",
+    employeeId: "LKN-2",
     name: "Omar Farooq",
     phone: "03121234579",
     image: "https://i.pravatar.cc/150?img=22",
@@ -176,7 +176,7 @@ export const employees = [
   },
   {
     id: 14,
-    employeeId: "EMP-0014",
+    employeeId: "LKN-3",
     name: "Rizwan Haider",
     phone: "03131234580",
     image: "https://i.pravatar.cc/150?img=47",

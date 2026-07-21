@@ -206,12 +206,15 @@ const EmployeesPage = () => {
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="table-scroll">
-          <table className="w-full min-w-[860px]">
+          <table className="w-full min-w-[960px]">
             <thead className="bg-slate-50 border-b">
               <tr>
                 <th className="px-6 py-4 text-left font-semibold">Employee</th>
                 <th className="px-6 py-4 text-left font-semibold">
                   Employee ID
+                </th>
+                <th className="px-6 py-4 text-left font-semibold">
+                  Device PIN
                 </th>
                 <th className="px-6 py-4 text-left font-semibold">
                   Designation
@@ -226,7 +229,7 @@ const EmployeesPage = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-20">
+                  <td colSpan={8} className="py-20">
                     <div className="flex justify-center">
                       <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
                     </div>
@@ -255,8 +258,12 @@ const EmployeesPage = () => {
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-6 py-4 text-slate-600 font-medium">
                       {employee.employeeId}
+                    </td>
+
+                    <td className="px-6 py-4 text-slate-600 font-mono">
+                      {employee.devicePin || "—"}
                     </td>
 
                     <td className="px-6 py-4">{employee.designation}</td>
@@ -310,7 +317,7 @@ const EmployeesPage = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-20">
+                  <td colSpan={8} className="py-20">
                     <div className="flex flex-col items-center px-4">
                       <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center">
                         <Users size={36} className="text-blue-600" />

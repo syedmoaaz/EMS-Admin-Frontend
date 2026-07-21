@@ -101,7 +101,8 @@ const BranchDevicePanel = ({ branchId, open }) => {
           <p className="text-xs text-slate-500 mt-1">
             Each branch needs its own device secret so attendance never mixes with
             other branches. Paste the secret only into this branch&apos;s Windows
-            agent.
+            agent. Enroll staff on the K50 using their numeric Device PIN (not
+            Employee ID like THT-1).
           </p>
         </div>
       </div>

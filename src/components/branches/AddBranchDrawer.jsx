@@ -7,6 +7,7 @@ import BranchDevicePanel from "./BranchDevicePanel";
 const emptyForm = {
   name: "",
   code: "",
+  cityCode: "",
   phone: "",
   city: "",
   manager: "",
@@ -30,6 +31,7 @@ const AddBranchDrawer = ({ open, onClose, branch = null, onSaved }) => {
       setForm({
         name: branch.name || "",
         code: branch.code || "",
+        cityCode: branch.cityCode || "",
         phone: branch.phone || "",
         city: branch.city || "",
         manager: branch.manager || "",
@@ -53,8 +55,19 @@ const AddBranchDrawer = ({ open, onClose, branch = null, onSaved }) => {
     e.preventDefault();
     setError("");
 
-    if (!form.name.trim() || !form.code.trim() || !form.city.trim() || !form.address.trim()) {
-      setError("Name, code, city and address are required.");
+    if (
+      !form.name.trim() ||
+      !form.code.trim() ||
+      !form.cityCode.trim() ||
+      !form.city.trim() ||
+      !form.address.trim()
+    ) {
+      setError("Name, code, city code, city and address are required.");
+      return;
+    }
+
+    if (!/^[A-Za-z]{2,5}$/.test(form.cityCode.trim())) {
+      setError("City code must be 2–5 letters (e.g. THT, KHI, SKR).");
       return;
     }
 
@@ -63,6 +76,7 @@ const AddBranchDrawer = ({ open, onClose, branch = null, onSaved }) => {
     const payload = {
       name: form.name.trim(),
       code: form.code.trim().toUpperCase(),
+      cityCode: form.cityCode.trim().toUpperCase(),
       phone: form.phone.trim(),
       city: form.city.trim(),
       manager: form.manager.trim(),
@@ -160,8 +174,25 @@ const AddBranchDrawer = ({ open, onClose, branch = null, onSaved }) => {
                 value={form.code}
                 onChange={handleChange}
                 className="w-full border rounded-xl px-4 py-3"
-                placeholder="KHI-01"
+                placeholder="THT-01"
               />
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm font-medium">
+                City Code *
+              </label>
+              <input
+                name="cityCode"
+                value={form.cityCode}
+                onChange={handleChange}
+                className="w-full border rounded-xl px-4 py-3"
+                placeholder="THT"
+                maxLength={5}
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Used for employee IDs (THT-1, THT-2…). Letters only.
+              </p>
             </div>
 
             <div>

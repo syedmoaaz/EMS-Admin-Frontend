@@ -6,6 +6,7 @@ import * as employeeService from "../../services/employeeService";
 const emptyForm = {
   name: "",
   employeeId: "",
+  devicePin: "",
   phone: "",
   branch: "",
   designation: "",
@@ -44,6 +45,7 @@ const AddEmployeeDrawer = ({
       setForm({
         name: employee.name || "",
         employeeId: employee.employeeId || "",
+        devicePin: employee.devicePin || "",
         phone: employee.phone || "",
         branch: branchId || "",
         designation: employee.designation || "",
@@ -81,14 +83,26 @@ const AddEmployeeDrawer = ({
     e.preventDefault();
     setError("");
 
+    if (!form.name.trim() || !form.phone.trim() || !form.branch || !form.designation) {
+      setError("Name, phone, branch and designation are required.");
+      return;
+    }
+
+    if (isEdit && (!form.employeeId.trim() || !form.devicePin.trim())) {
+      setError("Employee ID and Device PIN are required when editing.");
+      return;
+    }
+
+    if (form.devicePin.trim() && !/^[1-9][0-9]*$/.test(form.devicePin.trim())) {
+      setError("Device PIN must be digits only with no leading zero (K50 rule).");
+      return;
+    }
+
     if (
-      !form.name.trim() ||
-      !form.employeeId.trim() ||
-      !form.phone.trim() ||
-      !form.branch ||
-      !form.designation
+      form.employeeId.trim() &&
+      !/^[A-Za-z]{2,5}-[1-9][0-9]*$/.test(form.employeeId.trim())
     ) {
-      setError("Name, employee ID, phone, branch and designation are required.");
+      setError("Employee ID must look like CITY-n (e.g. THT-1). No leading zeros.");
       return;
     }
 
@@ -96,7 +110,6 @@ const AddEmployeeDrawer = ({
 
     const payload = {
       name: form.name.trim(),
-      employeeId: form.employeeId.trim().toUpperCase(),
       phone: form.phone.trim(),
       branch: form.branch,
       designation: form.designation,
@@ -107,6 +120,13 @@ const AddEmployeeDrawer = ({
       shiftTiming: form.shiftTiming.trim(),
       joiningDate: form.joiningDate || undefined,
     };
+
+    if (form.employeeId.trim()) {
+      payload.employeeId = form.employeeId.trim().toUpperCase();
+    }
+    if (form.devicePin.trim()) {
+      payload.devicePin = form.devicePin.trim();
+    }
 
     try {
       if (isEdit) {
@@ -218,18 +238,36 @@ const AddEmployeeDrawer = ({
 
             <div>
               <label className="block mb-2 text-sm font-medium">
-                Employee ID *
+                Employee ID {isEdit ? "*" : "(optional)"}
               </label>
               <input
                 name="employeeId"
                 value={form.employeeId}
                 onChange={handleChange}
                 className="w-full border rounded-xl px-4 py-3"
-                placeholder="EMP-0001"
+                placeholder="THT-1"
               />
               <p className="text-xs text-slate-500 mt-1.5">
-                Use the same ID as the biometric machine User ID so punches map
-                correctly.
+                City-based ID (e.g. THT-1). Leave blank on create to auto-generate
+                from the branch city code.
+              </p>
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm font-medium">
+                K50 / Device PIN {isEdit ? "*" : "(optional)"}
+              </label>
+              <input
+                name="devicePin"
+                value={form.devicePin}
+                onChange={handleChange}
+                className="w-full border rounded-xl px-4 py-3"
+                placeholder="101"
+                inputMode="numeric"
+              />
+              <p className="text-xs text-slate-500 mt-1.5">
+                Digits only, no leading zero. Enroll this PIN on the biometric
+                machine — not the Employee ID.
               </p>
             </div>
 
