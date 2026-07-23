@@ -1,10 +1,10 @@
-// Seed data for NovaPharma Ltd — first tenant company.
+// Seed data for ADIL AGENCIES PVT LTD — single company tenant.
 // Numeric `ref` fields are resolved to real ObjectIds during seeding.
 
 export const company = {
-  companyName: "NovaPharma Ltd.",
-  ownerName: "Saad Karim",
-  email: "owner@novapharma.com",
+  companyName: "ADIL AGENCIES PVT LTD",
+  ownerName: "Adil Agencies Admin",
+  email: "owner@adilagencies.com",
   phone: "03001234567",
   password: "admin123",
 };

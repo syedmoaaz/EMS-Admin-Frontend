@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useSidebar } from "../context/SidebarContext";
+import logo from "../assets/Logo.png";
 
 const menuItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -50,18 +51,19 @@ const Sidebar = () => {
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="px-5 py-5 border-b border-white/10 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">MediTrack</h1>
-            <p className="text-[10px] uppercase tracking-[0.28em] text-slate-400 mt-1">
-              EMS SUITE
-            </p>
+        <div className="px-4 py-4 border-b border-white/10 flex items-center justify-between gap-2">
+          <div className="bg-white rounded-xl px-2.5 py-2 min-w-0 flex-1">
+            <img
+              src={logo}
+              alt="ADIL AGENCIES PVT LTD"
+              className="h-10 w-auto max-w-full object-contain"
+            />
           </div>
 
           <button
             type="button"
             onClick={closeSidebar}
-            className="lg:hidden w-9 h-9 rounded-xl hover:bg-white/10 flex items-center justify-center"
+            className="lg:hidden w-9 h-9 rounded-xl hover:bg-white/10 flex items-center justify-center shrink-0"
             aria-label="Close menu"
           >
             <X size={18} />

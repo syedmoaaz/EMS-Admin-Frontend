@@ -30,7 +30,7 @@ npm run dev
 
 | Email | Password |
 |-------|----------|
-| `owner@novapharma.com` | `admin123` |
+| `owner@adilagencies.com` | `admin123` |
 
 ## API Endpoints
 

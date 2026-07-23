@@ -91,7 +91,7 @@ const updateTrayMenu = () => {
   ]);
 
   tray?.setToolTip(
-    `MediTrack Agent — ${config.deviceIp || "no device"}`
+    `ADIL AGENCIES Agent — ${config.deviceIp || "no device"}`
   );
   tray?.setContextMenu(menu);
 };

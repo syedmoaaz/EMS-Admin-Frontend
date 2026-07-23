@@ -70,7 +70,7 @@ const TopNavbar = () => {
         >
           <Building2 size={18} className="text-blue-600 shrink-0" />
           <span className="font-medium truncate text-sm lg:text-base">
-            {user?.companyName ?? "NovaPharma Ltd."}
+            {user?.companyName ?? "ADIL AGENCIES PVT LTD"}
           </span>
         </button>
 

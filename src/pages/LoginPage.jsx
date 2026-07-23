@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, User, ShieldCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import logo from "../assets/Logo.png";
 
 const LoginPage = () => {
   const { login, isAuthenticated, loading } = useAuth();
@@ -57,13 +58,12 @@ const LoginPage = () => {
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Brand panel */}
       <div className="lg:w-[45%] bg-[#08143b] text-white flex flex-col justify-between px-8 py-10 sm:px-12 sm:py-14 lg:px-16 lg:py-16">
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            MediTrack
-          </h1>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-slate-400 mt-2">
-            EMS SUITE
-          </p>
+        <div className="bg-white rounded-2xl px-4 py-3 w-fit max-w-full">
+          <img
+            src={logo}
+            alt="ADIL AGENCIES PVT LTD"
+            className="h-12 sm:h-14 w-auto object-contain"
+          />
         </div>
 
         <div className="my-10 lg:my-0">
@@ -77,21 +77,26 @@ const LoginPage = () => {
 
           <p className="text-slate-400 mt-4 max-w-md text-sm sm:text-base leading-relaxed">
             Secure admin access for monitoring attendance, branches, and field
-            staff across NovaPharma Ltd.
+            staff across ADIL AGENCIES PVT LTD.
           </p>
         </div>
 
         <p className="text-xs text-slate-500 hidden sm:block">
-          © {new Date().getFullYear()} NovaPharma Ltd. All rights reserved.
+          © {new Date().getFullYear()} ADIL AGENCIES PVT LTD. All rights
+          reserved.
         </p>
       </div>
 
       {/* Login form */}
       <div className="flex-1 flex items-center justify-center bg-slate-100 px-5 py-10 sm:px-8">
         <div className="w-full max-w-md">
-          <div className="lg:hidden mb-8 text-center">
-            <h1 className="text-2xl font-bold text-slate-900">MediTrack</h1>
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mt-1">
+          <div className="lg:hidden mb-8 flex flex-col items-center text-center">
+            <img
+              src={logo}
+              alt="ADIL AGENCIES PVT LTD"
+              className="h-12 w-auto object-contain mb-3"
+            />
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
               EMS Admin Login
             </p>
           </div>
@@ -124,7 +129,7 @@ const LoginPage = () => {
                     type="email"
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
-                    placeholder="owner@novapharma.com"
+                    placeholder="owner@adilagencies.com"
                     autoComplete="username"
                     className="w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                   />
@@ -186,7 +191,8 @@ const LoginPage = () => {
                 Demo credentials
               </p>
               <p className="text-sm text-slate-600 mt-1">
-                <span className="font-medium">owner@novapharma.com</span> / admin123
+                <span className="font-medium">owner@adilagencies.com</span> /
+                admin123
               </p>
             </div>
           </div>

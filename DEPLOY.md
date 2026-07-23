@@ -51,7 +51,7 @@ $env:MONGO_URI="mongodb+srv://USER:PASS@cluster.mongodb.net/ems_admin?retryWrite
 npm run seed
 ```
 
-Demo login after seed: `owner@novapharma.com` / `admin123`
+Demo login after seed: `owner@adilagencies.com` / `admin123`
 
 ---
 
