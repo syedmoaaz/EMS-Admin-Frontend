@@ -1,62 +1,77 @@
-# MediTrack Branch Agent
+# ADIL AGENCIES Branch Agent
 
-Windows agent for Module 1: pulls biometric punches from a branch ZKTeco K50 (LAN) and uploads them to EMS using that branch’s **device secret** only.
+Windows agent for Module 1: pulls biometric punches from a branch ZKTeco K50 (LAN / same network) and uploads them to EMS using that branch’s **device secret** only.
+
+Reliability patterns adapted from [ZKTECO-ADVANCED-CURSOR-AGENT](https://github.com/syedmoaaz/ZKTECO-ADVANCED-CURSOR-AGENT.git) (Gymfinity ZK agent).
+
+## Offline reliability (priority)
+
+```text
+Device (LAN) → poll → local outbox → retry POST → EMS backend
+```
+
+1. Poll `getAttendances()` over LAN (works if internet/Wi‑Fi uplink is down, as long as the PC reaches the device).
+2. Enqueue new punches into `data/queue.jsonl` and advance checkpoint in `data/state.json`.
+3. Sync pending rows to EMS `/device/attendance/ingest` when online.
+4. Mark `sent` only after HTTP success. Failures stay `pending` and retry with exponential backoff.
+
+### First install vs restart
+
+- **No `data/state.json` / not initialized:** skip existing device history once, then save checkpoint (avoids flooding old logs).
+- **After that:** punches that happened while the PC/agent was off are pulled from the device and queued on the next poll.
+
+### Backend idempotency
+
+EMS dedupes on `(branch + devicePin + punchedAt)`. Safe to retry after crashes.
 
 ## Employee IDs vs K50 PINs
 
 | Field | Example | Where |
 |--------|---------|--------|
-| **Employee ID** | `THT-1`, `KHI-2` | EMS only (city-readable) |
-| **Device PIN** | `11`, `101` | Enroll on K50 + send in ingest |
-
-K50 does **not** support letters or leading zeros. Never put `THT-1` on the machine.
-
-Postman / agent punch body uses the **device PIN**:
-
-```json
-{
-  "punches": [
-    { "employeeId": "11", "punchedAt": "2026-07-16T09:05:00.000Z" }
-  ]
-}
-```
-
-(`employeeId` in the ingest payload = K50 User ID / `devicePin`, not EMS `THT-1`.)
+| **Employee ID** | `THT-1` | EMS only |
+| **Device PIN** | `11`, `101` | K50 User ID — digits, **no leading zero** |
 
 ## Setup
-
-1. In EMS Admin → **Branches** → edit a branch → **Generate secret** → copy once.
-2. On the branch PC:
 
 ```bash
 cd branch-agent
 npm install
+npm install node-zklib
 ```
 
-3. Configure (CLI) or run Electron and use Settings:
+Configure via Electron Settings or:
 
 ```bash
-node -e "import('./src/config.js').then(m => m.saveConfig({ apiUrl: 'http://YOUR_SERVER:5000/api', deviceSecret: 'ems_dev_xxx', deviceIp: '192.168.1.201', deviceMode: 'mock' }))"
+node -e "import('./src/config.js').then(m => m.saveConfig({ apiUrl: 'https://YOUR-RAILWAY-URL/api', deviceSecret: 'ems_dev_xxx', deviceIp: '192.168.1.201', deviceMode: 'zk' }))"
 ```
 
-4. Test without a device (`deviceMode: mock`) using fake punches (use a real `devicePin`):
+Run:
+
+- Electron tray: `npm start`
+- Headless: `npm run sync`
+- Crash-restart wrapper: `run-agent.bat` (put in Windows Startup)
+
+Mock test:
 
 ```powershell
-$env:EMS_MOCK_PUNCHES='[{"employeeId":"11","punchedAt":"2026-07-16T09:05:00.000Z"}]'
+$env:EMS_MOCK_PUNCHES='[{"employeeId":"11","punchedAt":"2026-07-24T09:05:00.000Z","serialNo":1}]'
 npm run sync -- --once
 ```
 
-5. With a real K50 on LAN:
+## Config
 
-- Set `deviceMode` to `zk`
-- Install ZK client: `npm install zklib`
-- Enroll users with EMS **Device PIN** as the machine User ID
-- `npm start` (Electron tray) or `npm run sync` (headless loop)
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `pollIntervalSeconds` | `5` | Device poll interval |
+| `syncIntervalSeconds` | `3` | Outbox upload interval |
+| `uploadBatchSize` | `50` | Max punches per ingest |
+| `clearDeviceAfterQueue` | `false` | Only enable after testing firmware |
+| `deviceMode` | `mock` \| `zk` | Mock vs real K50 |
 
-## Isolation
+Settings UI config file: `~/.ems-branch-agent/config.json`  
+Outbox + state: `branch-agent/data/`  
+Logs: `branch-agent/logs/agent.log`
 
-Every request sends `X-Device-Secret`. Backend stamps `company` + `branch` from that secret only — branch A’s secret cannot write branch B attendance.
+## Hard limit
 
-## Late boot
-
-On start the agent always **catch-up syncs today’s punches** from the device, then polls on an interval. Enable “Start when Windows starts” in Settings (`openAtLogin`).
+If the device attendance memory fills and overwrites punches **before** the agent has queued them locally, those punches are lost at the hardware layer. Keep the agent always running on the branch PC.

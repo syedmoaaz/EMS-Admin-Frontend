@@ -10,12 +10,20 @@ const defaults = {
   deviceSecret: "",
   deviceIp: "192.168.1.201",
   devicePort: 4370,
-  pollIntervalSeconds: 45,
+  /** Device poll interval (seconds) — LAN pull into outbox */
+  pollIntervalSeconds: 5,
+  /** Backend sync interval (seconds) — drain outbox when online */
+  syncIntervalSeconds: 3,
+  lookbackDays: 7,
+  uploadBatchSize: 50,
   deviceMode: "mock", // "mock" | "zk"
   openAtLogin: true,
+  /** Keep false until verified on your K50 firmware */
+  clearDeviceAfterQueue: false,
 };
 
 export const getConfigPath = () => CONFIG_FILE;
+export const getConfigDir = () => CONFIG_DIR;
 
 export const loadConfig = () => {
   try {

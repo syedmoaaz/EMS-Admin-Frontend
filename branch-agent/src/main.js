@@ -29,7 +29,7 @@ const createSettingsWindow = () => {
 
   settingsWin = new BrowserWindow({
     width: 480,
-    height: 620,
+    height: 780,
     resizable: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
@@ -54,18 +54,32 @@ const updateTrayMenu = () => {
   const menu = Menu.buildFromTemplate([
     { label, enabled: false },
     {
-      label: state.lastSyncAt
-        ? `Last sync: ${new Date(state.lastSyncAt).toLocaleString()}`
-        : "Not synced yet",
+      label: state.deviceConnected ? "K50: Connected" : "K50: Disconnected",
       enabled: false,
     },
     {
-      label: state.lastError ? `Error: ${state.lastError.slice(0, 40)}` : "Status: OK",
+      label: state.online ? "EMS Server: Online" : "EMS Server: Offline",
+      enabled: false,
+    },
+    {
+      label: `Pending upload: ${state.pendingCount ?? 0}`,
+      enabled: false,
+    },
+    {
+      label: state.lastSyncAt
+        ? `Last upload: ${new Date(state.lastSyncAt).toLocaleString()}`
+        : "Not uploaded yet",
+      enabled: false,
+    },
+    {
+      label: state.lastError
+        ? `Error: ${state.lastError.slice(0, 40)}`
+        : "Status: OK",
       enabled: false,
     },
     { type: "separator" },
     {
-      label: "Sync now (catch-up today)",
+      label: "Sync now (pull + upload)",
       click: async () => {
         try {
           await runSyncCycle({ catchUp: true });

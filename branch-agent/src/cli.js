@@ -1,7 +1,15 @@
 import { loadConfig, saveConfig, getConfigPath } from "./config.js";
 import { runSyncCycle, startAgentLoop, stopAgentLoop } from "./sync.js";
+import { logger } from "./logger.js";
 
 const once = process.argv.includes("--once");
+
+process.on("uncaughtException", (err) => {
+  logger.error("uncaughtException", err.message || String(err));
+});
+process.on("unhandledRejection", (err) => {
+  logger.error("unhandledRejection", err?.message || String(err));
+});
 
 console.log("EMS Branch Agent");
 console.log("Config:", getConfigPath());
@@ -32,11 +40,13 @@ if (once) {
   startAgentLoop((state, result) => {
     if (result) {
       console.log(
-        `[${new Date().toLocaleTimeString()}] ${state.branchName} sync`,
-        result.summary
+        `[${new Date().toLocaleTimeString()}] ${state.branchName || "agent"}`,
+        `pending=${result.pending} uploaded=${result.upload?.uploaded ?? 0} pulled=${result.punches ?? 0}`
       );
     } else if (state.lastError) {
-      console.log(`[${new Date().toLocaleTimeString()}] error: ${state.lastError}`);
+      console.log(
+        `[${new Date().toLocaleTimeString()}] error: ${state.lastError}`
+      );
     }
   });
 

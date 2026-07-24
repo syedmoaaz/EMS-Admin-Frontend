@@ -11,8 +11,35 @@
       <h1>Branch Agent</h1>
       <p class="sub">
         Paste this branch&apos;s device secret only. Never reuse secrets across
-        branches.
+        branches. Punches are stored locally first, then uploaded when online.
       </p>
+
+      <div id="outboxPanel" class="outbox">
+        <div class="status-grid">
+          <div class="status-card" id="deviceCard">
+            <div class="status-label">K50 Device</div>
+            <div class="status-value">
+              <span class="dot" id="deviceDot"></span>
+              <strong id="deviceStatus">Checking…</strong>
+            </div>
+            <p class="status-hint" id="deviceHint">LAN connection to biometric</p>
+          </div>
+          <div class="status-card" id="serverCard">
+            <div class="status-label">EMS Server</div>
+            <div class="status-value">
+              <span class="dot" id="serverDot"></span>
+              <strong id="onlineStatus">Checking…</strong>
+            </div>
+            <p class="status-hint" id="serverHint">Internet upload to Railway</p>
+          </div>
+        </div>
+
+        <div class="outbox-row">
+          <span>Pending upload</span>
+          <strong id="pendingCount">0</strong>
+        </div>
+        <p id="status" class="status"></p>
+      </div>
 
       <form id="form">
         <label>
@@ -36,8 +63,13 @@
         </label>
 
         <label>
-          Poll interval (seconds)
-          <input id="pollIntervalSeconds" type="number" value="45" min="15" />
+          Poll interval (seconds) — device pull
+          <input id="pollIntervalSeconds" type="number" value="5" min="2" />
+        </label>
+
+        <label>
+          Sync interval (seconds) — upload outbox
+          <input id="syncIntervalSeconds" type="number" value="3" min="2" />
         </label>
 
         <label>
@@ -54,7 +86,6 @@
         </label>
 
         <p id="path" class="muted"></p>
-        <p id="status" class="status"></p>
 
         <div class="actions">
           <button type="submit">Save</button>
