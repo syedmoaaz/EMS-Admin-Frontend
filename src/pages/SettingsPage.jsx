@@ -7,6 +7,8 @@ import {
   KeyRound,
   Save,
   MapPinned,
+  CheckCircle2,
+  X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import * as settingsService from "../services/settingsService";
@@ -39,6 +41,7 @@ const SettingsPage = () => {
     newPassword: "",
     confirmPassword: "",
   });
+  const [passwordSuccessOpen, setPasswordSuccessOpen] = useState(false);
 
   const [settings, setSettings] = useState({
     officeTimings: { start: "09:00 AM", end: "06:00 PM" },
@@ -185,7 +188,7 @@ const SettingsPage = () => {
         newPassword: "",
         confirmPassword: "",
       });
-      toast.success("Password updated");
+      setPasswordSuccessOpen(true);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to change password.");
     }
@@ -597,6 +600,49 @@ const SettingsPage = () => {
           Update Password
         </button>
       </div>
+
+      {passwordSuccessOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/45"
+            onClick={() => setPasswordSuccessOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="password-success-title"
+            className="relative w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl px-6 py-8 text-center"
+          >
+            <button
+              type="button"
+              onClick={() => setPasswordSuccessOpen(false)}
+              className="absolute top-3 right-3 w-9 h-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+            <div className="mx-auto w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center">
+              <CheckCircle2 size={36} className="text-emerald-500" />
+            </div>
+            <h3
+              id="password-success-title"
+              className="mt-5 text-xl font-bold text-slate-900 dark:text-slate-100"
+            >
+              Password Changed Successfully!
+            </h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Use your new password the next time you sign in.
+            </p>
+            <button
+              type="button"
+              onClick={() => setPasswordSuccessOpen(false)}
+              className="mt-6 w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium py-3"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

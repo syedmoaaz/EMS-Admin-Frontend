@@ -129,7 +129,7 @@ const LoginPage = () => {
                     type="email"
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
-                    placeholder="owner@adilagencies.com"
+                    placeholder="Enter your email"
                     autoComplete="username"
                     className="w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                   />
@@ -185,16 +185,6 @@ const LoginPage = () => {
                 {submitting ? "Signing in..." : "Sign In"}
               </button>
             </form>
-
-            <div className="mt-6 rounded-xl bg-slate-50 border border-slate-100 px-4 py-3">
-              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                Demo credentials
-              </p>
-              <p className="text-sm text-slate-600 mt-1">
-                <span className="font-medium">owner@adilagencies.com</span> /
-                admin123
-              </p>
-            </div>
           </div>
         </div>
       </div>
