@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { X, Building2 } from "lucide-react";
-import toast from "react-hot-toast";
 import * as branchService from "../../services/branchService";
 import BranchDevicePanel from "./BranchDevicePanel";
+import { notifyError, notifySuccess } from "../../utils/notify";
 
 const emptyForm = {
   name: "",
@@ -53,6 +53,7 @@ const AddBranchDrawer = ({ open, onClose, branch = null, onSaved }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setError("");
 
     if (
@@ -88,10 +89,10 @@ const AddBranchDrawer = ({ open, onClose, branch = null, onSaved }) => {
     try {
       if (isEdit) {
         await branchService.updateBranch(branch._id, payload);
-        toast.success("Branch updated");
+        notifySuccess("Branch updated successfully");
       } else {
         await branchService.createBranch(payload);
-        toast.success("Branch created");
+        notifySuccess("Branch created successfully");
       }
 
       onSaved?.();
@@ -100,7 +101,7 @@ const AddBranchDrawer = ({ open, onClose, branch = null, onSaved }) => {
       const message =
         err.response?.data?.message || "Failed to save branch. Please try again.";
       setError(message);
-      toast.error(message);
+      notifyError(message);
     } finally {
       setSaving(false);
     }
@@ -295,10 +296,11 @@ const AddBranchDrawer = ({ open, onClose, branch = null, onSaved }) => {
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-70 text-white"
+              aria-busy={saving}
+              className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none text-white"
             >
               {saving
-                ? "Saving..."
+                ? "Saving branch…"
                 : isEdit
                   ? "Update Branch"
                   : "Save Branch"}

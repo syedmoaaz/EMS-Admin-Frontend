@@ -50,6 +50,10 @@ export const resolveEmployeeImage = async (image) => {
     folder: FOLDER,
     resource_type: "image",
     overwrite: false,
+    transformation: [
+      { width: 500, height: 500, crop: "limit" },
+      { quality: "auto:good", fetch_format: "auto" },
+    ],
   });
 
   return result.secure_url;

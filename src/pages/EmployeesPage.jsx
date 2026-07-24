@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search, Plus, Users, Eye, Pencil, Trash2 } from "lucide-react";
-import toast from "react-hot-toast";
+import { useSearchParams } from "react-router-dom";
 import AddEmployeeDrawer from "../components/employees/AddEmployeeDrawer";
 import Pagination from "../components/Pagination";
 import * as employeeService from "../services/employeeService";
 import * as branchService from "../services/branchService";
+import { notifyError, notifySuccess } from "../utils/notify";
 
 const PAGE_SIZE = 10;
 
 const EmployeesPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [openDrawer, setOpenDrawer] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => searchParams.get("q") || "");
   const [branchFilter, setBranchFilter] = useState("all");
   const [designationFilter, setDesignationFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -61,6 +63,11 @@ const EmployeesPage = () => {
   }, [search, branchFilter, designationFilter, statusFilter]);
 
   useEffect(() => {
+    const q = searchParams.get("q") || "";
+    setSearch(q);
+  }, [searchParams]);
+
+  useEffect(() => {
     loadBranches();
   }, [loadBranches]);
 
@@ -75,6 +82,13 @@ const EmployeesPage = () => {
   useEffect(() => {
     setPage(1);
   }, [search, branchFilter, designationFilter, statusFilter]);
+
+  const handleSearchChange = (value) => {
+    setSearch(value);
+    const next = value.trim();
+    if (next) setSearchParams({ q: next });
+    else setSearchParams({});
+  };
 
   const pagedEmployees = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
@@ -99,10 +113,10 @@ const EmployeesPage = () => {
 
     try {
       await employeeService.deleteEmployee(employee._id);
-      toast.success("Employee deleted");
+      notifySuccess("Employee deleted");
       loadEmployees();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to delete employee.");
+      notifyError(err.response?.data?.message || "Failed to delete employee.");
     }
   };
 
@@ -154,8 +168,8 @@ const EmployeesPage = () => {
 
               <input
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search employee..."
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder="Search name, phone, or ID..."
                 className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

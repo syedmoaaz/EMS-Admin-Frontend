@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Camera, Upload } from "lucide-react";
-import toast from "react-hot-toast";
 import * as employeeService from "../../services/employeeService";
 import * as settingsService from "../../services/settingsService";
+import { compressImageFile, isValidPkPhone } from "../../utils/imageCompress";
+import { notifyError, notifySuccess } from "../../utils/notify";
 
 const WEEK_DAYS = [
   "Monday",
@@ -178,23 +179,34 @@ const AddEmployeeDrawer = ({
     });
   };
 
-  const handleImage = (e) => {
+  const handleImage = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setForm((prev) => ({ ...prev, image: reader.result }));
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImageFile(file);
+      setForm((prev) => ({ ...prev, image: compressed }));
+    } catch (err) {
+      notifyError(err.message || "Failed to process image.");
+    } finally {
+      e.target.value = "";
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setError("");
 
     if (!form.name.trim() || !form.phone.trim() || !form.branch || !form.designation) {
       setError("Name, phone, branch and designation are required.");
+      return;
+    }
+
+    const phone = form.phone.trim();
+    if (!isValidPkPhone(phone)) {
+      setError("Invalid number. Enter a correct 11-digit number starting with 03.");
+      notifyError("Invalid number. Enter a correct 11-digit number starting with 03.");
       return;
     }
 
@@ -230,7 +242,7 @@ const AddEmployeeDrawer = ({
 
     const payload = {
       name: form.name.trim(),
-      phone: form.phone.trim(),
+      phone,
       branch: form.branch,
       designation: form.designation,
       department: form.department.trim(),
@@ -258,10 +270,10 @@ const AddEmployeeDrawer = ({
     try {
       if (isEdit) {
         await employeeService.updateEmployee(employee._id, payload);
-        toast.success("Employee updated");
+        notifySuccess("Employee updated successfully");
       } else {
         await employeeService.createEmployee(payload);
-        toast.success("Employee created");
+        notifySuccess("Employee added successfully");
       }
 
       onSaved?.();
@@ -271,7 +283,7 @@ const AddEmployeeDrawer = ({
         err.response?.data?.message ||
         "Failed to save employee. Please try again.";
       setError(message);
-      toast.error(message);
+      notifyError(message);
     } finally {
       setSaving(false);
     }
@@ -408,7 +420,12 @@ const AddEmployeeDrawer = ({
                 onChange={handleChange}
                 className="w-full border rounded-xl px-4 py-3"
                 placeholder="03XXXXXXXXX"
+                inputMode="numeric"
+                maxLength={11}
               />
+              <p className="text-xs text-slate-500 mt-1.5">
+                Must be 11 digits and start with 03 (e.g. 03001234567).
+              </p>
             </div>
 
             <div>
@@ -624,10 +641,11 @@ const AddEmployeeDrawer = ({
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-70 text-white"
+              aria-busy={saving}
+              className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none text-white"
             >
               {saving
-                ? "Saving..."
+                ? "Saving employee…"
                 : isEdit
                   ? "Update Employee"
                   : "Save Employee"}

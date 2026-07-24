@@ -6,16 +6,21 @@ import {
   CalendarDays,
   Building2,
   Menu,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useSidebar } from "../context/SidebarContext";
+import { useTheme } from "../context/ThemeContext";
 import * as alertService from "../services/alertService";
 
 const TopNavbar = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { openSidebar } = useSidebar();
+  const { isDark, toggleTheme } = useTheme();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [query, setQuery] = useState("");
 
   const initials = user?.name
     ?.split(" ")
@@ -52,8 +57,17 @@ const TopNavbar = () => {
     return () => clearInterval(timer);
   }, [loadUnread]);
 
+  const runSearch = (value = query) => {
+    const q = value.trim();
+    if (!q) {
+      navigate("/employees");
+      return;
+    }
+    navigate(`/employees?q=${encodeURIComponent(q)}`);
+  };
+
   return (
-    <header className="min-h-16 bg-white border-b border-slate-200 px-3 sm:px-4 lg:px-8 py-2 flex items-center justify-between gap-3">
+    <header className="min-h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 sm:px-4 lg:px-8 py-2 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
         <button
           type="button"
@@ -74,18 +88,26 @@ const TopNavbar = () => {
           </span>
         </button>
 
-        <div className="relative flex-1 max-w-xl hidden md:block">
+        <form
+          className="relative flex-1 max-w-xl hidden md:block"
+          onSubmit={(e) => {
+            e.preventDefault();
+            runSearch();
+          }}
+        >
           <Search
             size={18}
             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
           />
 
           <input
-            type="text"
-            placeholder="Search employees, branches, IDs..."
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search employee name, phone, or ID..."
             className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-4 outline-none focus:ring-2 focus:ring-blue-500"
           />
-        </div>
+        </form>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -98,6 +120,16 @@ const TopNavbar = () => {
           <CalendarDays size={16} />
           {today}
         </div>
+
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="w-10 h-10 sm:w-11 sm:h-11 border rounded-xl flex items-center justify-center hover:bg-slate-50"
+          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          aria-label="Toggle dark mode"
+        >
+          {isDark ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
 
         <button
           type="button"

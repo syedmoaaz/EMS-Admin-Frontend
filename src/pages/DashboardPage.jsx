@@ -9,10 +9,13 @@ import {
   TriangleAlert,
   Building2,
   MapPin,
+  Moon,
+  Sun,
 } from "lucide-react";
 
 import StatsCard from "../components/StatsCard";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import * as dashboardService from "../services/dashboardService";
 import * as attendanceService from "../services/attendanceService";
 import * as branchService from "../services/branchService";
@@ -21,6 +24,7 @@ import * as alertService from "../services/alertService";
 
 const DashboardPage = () => {
   const { user } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [statsData, setStatsData] = useState(null);
@@ -164,6 +168,16 @@ const DashboardPage = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 bg-white font-medium hover:bg-slate-50 transition"
+            title={isDark ? "Light mode" : "Dark mode"}
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            {isDark ? "Light mode" : "Dark mode"}
+          </button>
+
           <button
             type="button"
             onClick={() => navigate("/attendance")}
