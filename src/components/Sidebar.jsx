@@ -70,7 +70,7 @@ const Sidebar = () => {
           </button>
         </div>
 
-        <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto">
+        <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon;
 
@@ -80,20 +80,18 @@ const Sidebar = () => {
                 to={item.path}
                 onClick={closeSidebar}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-2xl transition duration-200 ${
+                  `flex items-center gap-2.5 px-4 py-2.5 rounded-2xl transition duration-200 ${
                     isActive
                       ? "bg-white/10 text-white shadow-inner"
                       : "text-slate-300 hover:bg-white/5 hover:text-white"
                   }`
                 }
               >
-                <div className="w-11 h-11 rounded-2xl bg-slate-900/70 flex items-center justify-center shrink-0">
-                  <Icon size={20} />
+                <div className="w-9 h-9 rounded-2xl bg-slate-900/70 flex items-center justify-center shrink-0">
+                  <Icon size={17} />
                 </div>
 
-                <span className="text-base font-medium leading-snug">
-                  {item.name}
-                </span>
+                <span className="text-sm font-medium">{item.name}</span>
               </NavLink>
             );
           })}
