@@ -36,6 +36,9 @@ Replace `PASSWORD` with the real password (URL-encode special characters).
 | `JWT_EXPIRES_IN` | `7d` |
 | `CLIENT_URL` | your Vercel URL (add after step 3; can update later) |
 | `ADMIN_SECRET` | strong secret for forgot-password admin header |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
 
 5. Generate a public domain: Settings → Networking → **Generate Domain**.  
    Example: `https://ems-api-production-xxxx.up.railway.app`

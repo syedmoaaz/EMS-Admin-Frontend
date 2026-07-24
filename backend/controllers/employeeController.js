@@ -3,6 +3,10 @@ import Branch from "../models/Branch.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { companyQuery } from "../utils/companyScope.js";
 import {
+  resolveEmployeeImage,
+  destroyEmployeeImage,
+} from "../utils/cloudinaryImage.js";
+import {
   isValidDevicePin,
   isValidEmployeeId,
   nextDevicePin,
@@ -99,9 +103,12 @@ export const createEmployee = asyncHandler(async (req, res) => {
     );
   }
 
+  const image = await resolveEmployeeImage(req.body.image);
+
   try {
     const employee = await Employee.create({
       ...req.body,
+      image,
       employeeId,
       devicePin,
       company: req.companyId,
@@ -128,6 +135,15 @@ export const updateEmployee = asyncHandler(async (req, res) => {
     await verifyBranchBelongsToCompany(req.body.branch, req.companyId, res);
   }
 
+  const existing = await Employee.findOne(
+    companyQuery(req, { _id: req.params.id })
+  );
+
+  if (!existing) {
+    res.status(404);
+    throw new Error("Employee not found");
+  }
+
   const updates = { ...req.body };
 
   if (updates.employeeId !== undefined) {
@@ -150,17 +166,28 @@ export const updateEmployee = asyncHandler(async (req, res) => {
     }
   }
 
+  if (updates.image !== undefined) {
+    updates.image = await resolveEmployeeImage(updates.image);
+
+    if (
+      updates.image &&
+      existing.image &&
+      updates.image !== existing.image
+    ) {
+      await destroyEmployeeImage(existing.image);
+    }
+
+    if (!updates.image && existing.image) {
+      await destroyEmployeeImage(existing.image);
+    }
+  }
+
   try {
     const employee = await Employee.findOneAndUpdate(
       companyQuery(req, { _id: req.params.id }),
       updates,
       { new: true, runValidators: true }
     );
-
-    if (!employee) {
-      res.status(404);
-      throw new Error("Employee not found");
-    }
 
     res.json({ success: true, data: employee });
   } catch (err) {
@@ -187,6 +214,8 @@ export const deleteEmployee = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Employee not found");
   }
+
+  await destroyEmployeeImage(employee.image);
 
   res.json({ success: true, message: "Employee deleted" });
 });
