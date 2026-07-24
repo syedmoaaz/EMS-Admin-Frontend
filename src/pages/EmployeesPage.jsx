@@ -268,6 +268,11 @@ const EmployeesPage = () => {
                           <p className="text-xs text-slate-500">
                             {employee.role}
                           </p>
+                          {employee.hasFieldPassword && (
+                            <span className="mt-1 inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-100 text-blue-700">
+                              Field app access
+                            </span>
+                          )}
                         </div>
                       </div>
                     </td>

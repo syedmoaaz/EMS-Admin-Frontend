@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 
 export const EMPLOYEE_TYPES = ["Office Staff", "Order Taker", "Dispatcher"];
 export const FIELD_EMPLOYEE_TYPES = ["Order Taker", "Dispatcher"];
@@ -54,6 +55,24 @@ const employeeSchema = new mongoose.Schema(
       enum: EMPLOYEE_TYPES,
       default: "Office Staff",
     },
+    /**
+     * Field app password (Order Taker / Dispatcher only).
+     * Set only by company owner — never returned to clients.
+     */
+    fieldPassword: {
+      type: String,
+      select: false,
+      default: "",
+      validate: {
+        validator: (v) => !v || String(v).length >= 6 || String(v).startsWith("$2"),
+        message: "Field app password must be at least 6 characters",
+      },
+    },
+    /** True when fieldPassword is set (safe to expose to admin UI). */
+    hasFieldPassword: {
+      type: Boolean,
+      default: false,
+    },
     /** Display string, kept in sync with workSchedule.start/end */
     shiftTiming: { type: String, trim: true },
     /** Per-employee attendance rules (used for late / hours). Settings are defaults only. */
@@ -87,6 +106,39 @@ const employeeSchema = new mongoose.Schema(
 
 employeeSchema.index({ company: 1, employeeId: 1 }, { unique: true });
 employeeSchema.index({ company: 1, devicePin: 1 }, { unique: true });
+
+employeeSchema.pre("save", async function (next) {
+  if (!this.isModified("fieldPassword")) return next();
+  if (!this.fieldPassword) {
+    this.hasFieldPassword = false;
+    return next();
+  }
+  const salt = await bcrypt.genSalt(10);
+  this.fieldPassword = await bcrypt.hash(this.fieldPassword, salt);
+  this.hasFieldPassword = true;
+  next();
+});
+
+employeeSchema.methods.compareFieldPassword = function (candidate) {
+  if (!this.fieldPassword) return Promise.resolve(false);
+  return bcrypt.compare(candidate, this.fieldPassword);
+};
+
+employeeSchema.methods.toSafeJSON = function () {
+  const obj = this.toObject({ virtuals: true });
+  delete obj.fieldPassword;
+  obj.hasFieldPassword = Boolean(this.hasFieldPassword);
+  return obj;
+};
+
+/** Strip password hash from lean docs / populated results */
+export const sanitizeEmployee = (doc) => {
+  if (!doc) return doc;
+  const obj = typeof doc.toObject === "function" ? doc.toObject() : { ...doc };
+  delete obj.fieldPassword;
+  obj.hasFieldPassword = Boolean(obj.hasFieldPassword);
+  return obj;
+};
 
 export { EMPLOYEE_ID_RE, DEVICE_PIN_RE };
 export default mongoose.model("Employee", employeeSchema);

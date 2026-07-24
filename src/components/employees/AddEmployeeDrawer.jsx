@@ -24,6 +24,8 @@ const defaultSchedule = {
   workingDays: WEEK_DAYS.slice(0, 6),
 };
 
+const FIELD_ROLES = ["Order Taker", "Dispatcher"];
+
 const emptyForm = {
   name: "",
   employeeId: "",
@@ -36,6 +38,9 @@ const emptyForm = {
   joiningDate: "",
   status: "Active",
   image: "",
+  password: "",
+  confirmPassword: "",
+  resetPassword: false,
   workSchedule: { ...defaultSchedule, workingDays: [...defaultSchedule.workingDays] },
 };
 
@@ -52,6 +57,7 @@ const AddEmployeeDrawer = ({
   const [error, setError] = useState("");
   const [companyDefaults, setCompanyDefaults] = useState(defaultSchedule);
   const isEdit = Boolean(employee?._id);
+  const isFieldRole = FIELD_ROLES.includes(form.role);
 
   useEffect(() => {
     if (!open) return;
@@ -113,6 +119,9 @@ const AddEmployeeDrawer = ({
             : "",
           status: employee.status || "Active",
           image: employee.image || "",
+          password: "",
+          confirmPassword: "",
+          resetPassword: false,
           workSchedule: {
             start: ws.start || defaults.start,
             end: ws.end || defaults.end,
@@ -238,6 +247,25 @@ const AddEmployeeDrawer = ({
       return;
     }
 
+    const needsPassword =
+      isFieldRole &&
+      (!isEdit || form.resetPassword || !employee?.hasFieldPassword);
+
+    if (needsPassword) {
+      if (!form.password.trim()) {
+        setError("Field app password is required for Order Taker / Dispatcher.");
+        return;
+      }
+      if (form.password.length < 6) {
+        setError("Field app password must be at least 6 characters.");
+        return;
+      }
+      if (form.password !== form.confirmPassword) {
+        setError("Password and confirm password do not match.");
+        return;
+      }
+    }
+
     setSaving(true);
 
     const payload = {
@@ -265,6 +293,9 @@ const AddEmployeeDrawer = ({
     }
     if (form.devicePin.trim()) {
       payload.devicePin = form.devicePin.trim();
+    }
+    if (needsPassword && form.password.trim()) {
+      payload.password = form.password;
     }
 
     try {
@@ -494,6 +525,74 @@ const AddEmployeeDrawer = ({
                 ))}
               </select>
             </div>
+
+            {isFieldRole && (
+              <div className="sm:col-span-2 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Field app access
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Login ID is the Employee ID. Password is set only by you —
+                    staff cannot change it themselves.
+                    {isEdit && employee?.hasFieldPassword
+                      ? " Password is already set."
+                      : ""}
+                  </p>
+                </div>
+
+                {isEdit && (
+                  <label className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={form.resetPassword}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          resetPassword: e.target.checked,
+                          password: "",
+                          confirmPassword: "",
+                        }))
+                      }
+                    />
+                    Reset password
+                  </label>
+                )}
+
+                {(!isEdit || form.resetPassword || !employee?.hasFieldPassword) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block mb-2 text-sm font-medium">
+                        {isEdit ? "New password *" : "Set password *"}
+                      </label>
+                      <input
+                        type="password"
+                        name="password"
+                        value={form.password}
+                        onChange={handleChange}
+                        autoComplete="new-password"
+                        className="w-full border rounded-xl px-4 py-3 bg-white"
+                        placeholder="Min. 6 characters"
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-2 text-sm font-medium">
+                        Confirm password *
+                      </label>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        value={form.confirmPassword}
+                        onChange={handleChange}
+                        autoComplete="new-password"
+                        className="w-full border rounded-xl px-4 py-3 bg-white"
+                        placeholder="Repeat password"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div>
               <label className="block mb-2 text-sm font-medium">

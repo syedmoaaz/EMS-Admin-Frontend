@@ -17,6 +17,11 @@ export const protect = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    if (decoded.type === "employee") {
+      res.status(401);
+      throw new Error("Not authorized, company token required");
+    }
+
     if (!decoded.companyId) {
       res.status(401);
       throw new Error("Not authorized, invalid token");
