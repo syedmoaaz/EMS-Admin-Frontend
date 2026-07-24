@@ -208,7 +208,8 @@ const SettingsPage = () => {
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold mt-1">Settings</h1>
           <p className="text-slate-500 mt-1 text-sm sm:text-base">
-            Configure company profile, timings, GPS and alert rules.
+            Configure company profile, default timings, GPS and alert rules.
+            Real late rules are set per employee.
           </p>
         </div>
 
@@ -283,21 +284,32 @@ const SettingsPage = () => {
         </div>
       </div>
 
-      {/* Timings */}
+      {/* Timings — company defaults / general info */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-11 h-11 rounded-xl bg-orange-50 flex items-center justify-center">
             <Clock3 size={20} className="text-orange-600" />
           </div>
           <div>
-            <h2 className="text-xl font-bold">Office Timings & Attendance</h2>
-            <p className="text-sm text-slate-500">Working hours and late rules</p>
+            <h2 className="text-xl font-bold">Company Timing Defaults</h2>
+            <p className="text-sm text-slate-500">
+              General reference and defaults for new employees. Late / attendance
+              uses each employee&apos;s own work schedule.
+            </p>
           </div>
+        </div>
+
+        <div className="mb-5 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 text-sm text-amber-800">
+          These values do not override per-employee timings. Edit an employee to
+          set their real start time, late threshold, full-day hours, and working
+          days.
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
-            <label className="block text-sm font-medium mb-2">Start Time</label>
+            <label className="block text-sm font-medium mb-2">
+              Default Start Time
+            </label>
             <input
               value={settings.officeTimings.start}
               onChange={(e) =>
@@ -311,7 +323,9 @@ const SettingsPage = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">End Time</label>
+            <label className="block text-sm font-medium mb-2">
+              Default End Time
+            </label>
             <input
               value={settings.officeTimings.end}
               onChange={(e) =>
@@ -326,7 +340,7 @@ const SettingsPage = () => {
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">
-              Late Threshold (minutes)
+              Default Late Threshold (minutes)
             </label>
             <input
               type="number"
@@ -346,7 +360,7 @@ const SettingsPage = () => {
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">
-              Full Day Hours
+              Default Full Day Hours
             </label>
             <input
               type="number"
@@ -367,7 +381,7 @@ const SettingsPage = () => {
         </div>
 
         <div className="mt-6">
-          <p className="text-sm font-medium mb-3">Working Days</p>
+          <p className="text-sm font-medium mb-3">Default Working Days</p>
           <div className="flex flex-wrap gap-2">
             {WEEK_DAYS.map((day) => {
               const active = settings.workingDays.includes(day);

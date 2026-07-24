@@ -54,7 +54,27 @@ const employeeSchema = new mongoose.Schema(
       enum: EMPLOYEE_TYPES,
       default: "Office Staff",
     },
+    /** Display string, kept in sync with workSchedule.start/end */
     shiftTiming: { type: String, trim: true },
+    /** Per-employee attendance rules (used for late / hours). Settings are defaults only. */
+    workSchedule: {
+      start: { type: String, trim: true, default: "09:00 AM" },
+      end: { type: String, trim: true, default: "06:00 PM" },
+      lateThresholdMinutes: { type: Number, default: 15, min: 0 },
+      halfDayHours: { type: Number, default: 4, min: 0 },
+      fullDayHours: { type: Number, default: 8, min: 1 },
+      workingDays: {
+        type: [String],
+        default: [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ],
+      },
+    },
     status: {
       type: String,
       enum: ["Active", "Inactive"],

@@ -2,6 +2,26 @@ import { useEffect, useRef, useState } from "react";
 import { X, Camera, Upload } from "lucide-react";
 import toast from "react-hot-toast";
 import * as employeeService from "../../services/employeeService";
+import * as settingsService from "../../services/settingsService";
+
+const WEEK_DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
+const defaultSchedule = {
+  start: "09:00 AM",
+  end: "06:00 PM",
+  lateThresholdMinutes: 15,
+  halfDayHours: 4,
+  fullDayHours: 8,
+  workingDays: WEEK_DAYS.slice(0, 6),
+};
 
 const emptyForm = {
   name: "",
@@ -15,7 +35,7 @@ const emptyForm = {
   joiningDate: "",
   status: "Active",
   image: "",
-  shiftTiming: "",
+  workSchedule: { ...defaultSchedule, workingDays: [...defaultSchedule.workingDays] },
 };
 
 const AddEmployeeDrawer = ({
@@ -29,43 +49,133 @@ const AddEmployeeDrawer = ({
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [companyDefaults, setCompanyDefaults] = useState(defaultSchedule);
   const isEdit = Boolean(employee?._id);
 
   useEffect(() => {
     if (!open) return;
 
+    let cancelled = false;
+
+    const loadDefaults = async () => {
+      try {
+        const settingsRes = await settingsService.getSettings();
+        const data = settingsRes.data || {};
+        const nextDefaults = {
+          start: data.officeTimings?.start || defaultSchedule.start,
+          end: data.officeTimings?.end || defaultSchedule.end,
+          lateThresholdMinutes:
+            data.attendanceRules?.lateThresholdMinutes ??
+            defaultSchedule.lateThresholdMinutes,
+          halfDayHours:
+            data.attendanceRules?.halfDayHours ?? defaultSchedule.halfDayHours,
+          fullDayHours:
+            data.attendanceRules?.fullDayHours ?? defaultSchedule.fullDayHours,
+          workingDays:
+            data.workingDays?.length > 0
+              ? data.workingDays
+              : defaultSchedule.workingDays,
+        };
+        if (!cancelled) setCompanyDefaults(nextDefaults);
+        return nextDefaults;
+      } catch {
+        return defaultSchedule;
+      }
+    };
+
     setError("");
 
-    if (employee) {
-      const branchId =
-        typeof employee.branch === "object"
-          ? employee.branch?._id
-          : employee.branch;
+    (async () => {
+      const defaults = await loadDefaults();
 
-      setForm({
-        name: employee.name || "",
-        employeeId: employee.employeeId || "",
-        devicePin: employee.devicePin || "",
-        phone: employee.phone || "",
-        branch: branchId || "",
-        designation: employee.designation || "",
-        department: employee.department || "",
-        role: employee.role || "Office Staff",
-        joiningDate: employee.joiningDate
-          ? new Date(employee.joiningDate).toISOString().slice(0, 10)
-          : "",
-        status: employee.status || "Active",
-        image: employee.image || "",
-        shiftTiming: employee.shiftTiming || "",
-      });
-    } else {
-      setForm(emptyForm);
-    }
+      if (cancelled) return;
+
+      if (employee) {
+        const branchId =
+          typeof employee.branch === "object"
+            ? employee.branch?._id
+            : employee.branch;
+
+        const ws = employee.workSchedule || {};
+
+        setForm({
+          name: employee.name || "",
+          employeeId: employee.employeeId || "",
+          devicePin: employee.devicePin || "",
+          phone: employee.phone || "",
+          branch: branchId || "",
+          designation: employee.designation || "",
+          department: employee.department || "",
+          role: employee.role || "Office Staff",
+          joiningDate: employee.joiningDate
+            ? new Date(employee.joiningDate).toISOString().slice(0, 10)
+            : "",
+          status: employee.status || "Active",
+          image: employee.image || "",
+          workSchedule: {
+            start: ws.start || defaults.start,
+            end: ws.end || defaults.end,
+            lateThresholdMinutes:
+              ws.lateThresholdMinutes ?? defaults.lateThresholdMinutes,
+            halfDayHours: ws.halfDayHours ?? defaults.halfDayHours,
+            fullDayHours: ws.fullDayHours ?? defaults.fullDayHours,
+            workingDays:
+              ws.workingDays?.length > 0
+                ? ws.workingDays
+                : [...defaults.workingDays],
+          },
+        });
+      } else {
+        setForm({
+          ...emptyForm,
+          workSchedule: {
+            ...defaults,
+            workingDays: [...defaults.workingDays],
+          },
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [open, employee]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleScheduleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      workSchedule: {
+        ...prev.workSchedule,
+        [name]:
+          name === "lateThresholdMinutes" ||
+          name === "halfDayHours" ||
+          name === "fullDayHours"
+            ? Number(value)
+            : value,
+      },
+    }));
+  };
+
+  const toggleWorkingDay = (day) => {
+    setForm((prev) => {
+      const days = prev.workSchedule.workingDays || [];
+      const exists = days.includes(day);
+      return {
+        ...prev,
+        workSchedule: {
+          ...prev.workSchedule,
+          workingDays: exists
+            ? days.filter((d) => d !== day)
+            : [...days, day],
+        },
+      };
+    });
   };
 
   const handleImage = (e) => {
@@ -85,6 +195,16 @@ const AddEmployeeDrawer = ({
 
     if (!form.name.trim() || !form.phone.trim() || !form.branch || !form.designation) {
       setError("Name, phone, branch and designation are required.");
+      return;
+    }
+
+    if (!form.workSchedule.start.trim() || !form.workSchedule.end.trim()) {
+      setError("Start time and end time are required.");
+      return;
+    }
+
+    if (!form.workSchedule.workingDays?.length) {
+      setError("Select at least one working day.");
       return;
     }
 
@@ -117,8 +237,15 @@ const AddEmployeeDrawer = ({
       role: form.role,
       status: form.status,
       image: form.image || "",
-      shiftTiming: form.shiftTiming.trim(),
       joiningDate: form.joiningDate || undefined,
+      workSchedule: {
+        start: form.workSchedule.start.trim(),
+        end: form.workSchedule.end.trim(),
+        lateThresholdMinutes: Number(form.workSchedule.lateThresholdMinutes) || 0,
+        halfDayHours: Number(form.workSchedule.halfDayHours) || 0,
+        fullDayHours: Number(form.workSchedule.fullDayHours) || 8,
+        workingDays: form.workSchedule.workingDays,
+      },
     };
 
     if (form.employeeId.trim()) {
@@ -171,8 +298,8 @@ const AddEmployeeDrawer = ({
             </h2>
             <p className="text-sm text-slate-500 mt-1">
               {isEdit
-                ? "Update employee profile."
-                : "Create a new employee profile."}
+                ? "Update employee profile and work schedule."
+                : "Create a new employee with their own timings."}
             </p>
           </div>
 
@@ -365,19 +492,6 @@ const AddEmployeeDrawer = ({
             </div>
 
             <div>
-              <label className="block mb-2 text-sm font-medium">
-                Shift Timing
-              </label>
-              <input
-                name="shiftTiming"
-                value={form.shiftTiming}
-                onChange={handleChange}
-                className="w-full border rounded-xl px-4 py-3"
-                placeholder="09:00 AM - 06:00 PM"
-              />
-            </div>
-
-            <div>
               <label className="block mb-2 text-sm font-medium">Status</label>
               <select
                 name="status"
@@ -388,6 +502,107 @@ const AddEmployeeDrawer = ({
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
               </select>
+            </div>
+          </div>
+
+          <div className="mt-8 rounded-2xl border border-slate-200 p-4 space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">
+                Work schedule *
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Used for late marking and attendance. Prefills from company
+                defaults ({companyDefaults.start} – {companyDefaults.end}).
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-2 text-sm font-medium">
+                  Start Time *
+                </label>
+                <input
+                  name="start"
+                  value={form.workSchedule.start}
+                  onChange={handleScheduleChange}
+                  className="w-full border rounded-xl px-4 py-3"
+                  placeholder="09:00 AM"
+                />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-medium">
+                  End Time *
+                </label>
+                <input
+                  name="end"
+                  value={form.workSchedule.end}
+                  onChange={handleScheduleChange}
+                  className="w-full border rounded-xl px-4 py-3"
+                  placeholder="06:00 PM"
+                />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-medium">
+                  Late Threshold (min)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  name="lateThresholdMinutes"
+                  value={form.workSchedule.lateThresholdMinutes}
+                  onChange={handleScheduleChange}
+                  className="w-full border rounded-xl px-4 py-3"
+                />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-medium">
+                  Full Day Hours
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  name="fullDayHours"
+                  value={form.workSchedule.fullDayHours}
+                  onChange={handleScheduleChange}
+                  className="w-full border rounded-xl px-4 py-3"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block mb-2 text-sm font-medium">
+                  Half Day Hours
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  name="halfDayHours"
+                  value={form.workSchedule.halfDayHours}
+                  onChange={handleScheduleChange}
+                  className="w-full border rounded-xl px-4 py-3"
+                />
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium mb-3">Working Days *</p>
+              <div className="flex flex-wrap gap-2">
+                {WEEK_DAYS.map((day) => {
+                  const active = form.workSchedule.workingDays.includes(day);
+                  return (
+                    <button
+                      type="button"
+                      key={day}
+                      onClick={() => toggleWorkingDay(day)}
+                      className={`px-3 py-2 rounded-xl border text-sm font-medium ${
+                        active
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {day.slice(0, 3)}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

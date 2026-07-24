@@ -1,8 +1,11 @@
 import Attendance from "../models/Attendance.js";
 import AttendanceLog from "../models/AttendanceLog.js";
 import Employee from "../models/Employee.js";
-import Settings from "../models/Settings.js";
 import { normalizeDevicePin } from "../utils/employeeIds.js";
+import {
+  getCompanyScheduleDefaults,
+  resolveEmployeeSchedule,
+} from "../utils/workSchedule.js";
 
 const pad = (n) => String(n).padStart(2, "0");
 
@@ -43,12 +46,20 @@ const computeHours = (first, last) => {
   return `${h}h ${m}m`;
 };
 
+const weekdayName = (date) =>
+  new Date(date).toLocaleDateString("en-US", { weekday: "long" });
+
 const resolveStatus = ({
   firstPunch,
   officeStart,
   lateThresholdMinutes,
   hasCheckout,
+  isWorkingDay,
 }) => {
+  if (!isWorkingDay) {
+    return hasCheckout ? "Present" : "Working";
+  }
+
   const { hours, minutes } = parseOfficeStart(officeStart);
   const threshold = new Date(firstPunch);
   threshold.setHours(hours, minutes + lateThresholdMinutes, 0, 0);
@@ -95,28 +106,30 @@ export const deriveDailyAttendance = async ({
 
   if (!logs.length) return null;
 
-  const employee =
-    logs.find((l) => l.employee)?.employee ||
-    (await findEmployeeByDevicePin(companyId, devicePin))?._id;
+  const linkedId = logs.find((l) => l.employee)?.employee;
+  const employeeDoc =
+    (linkedId && (await Employee.findById(linkedId))) ||
+    (await findEmployeeByDevicePin(companyId, devicePin));
 
-  if (!employee) {
+  if (!employeeDoc) {
     return null;
   }
 
+  const employee = employeeDoc._id;
   const first = logs[0].punchedAt;
   const last = logs[logs.length - 1].punchedAt;
   const hasCheckout = logs.length > 1;
 
-  const settings = await Settings.findOne({ company: companyId }).lean();
-  const officeStart = settings?.officeTimings?.start || "09:00 AM";
-  const lateThresholdMinutes =
-    settings?.attendanceRules?.lateThresholdMinutes ?? 15;
+  const companyDefaults = await getCompanyScheduleDefaults(companyId);
+  const schedule = resolveEmployeeSchedule(employeeDoc, companyDefaults);
+  const isWorkingDay = schedule.workingDays.includes(weekdayName(first));
 
   const status = resolveStatus({
     firstPunch: first,
-    officeStart,
-    lateThresholdMinutes,
+    officeStart: schedule.start,
+    lateThresholdMinutes: schedule.lateThresholdMinutes,
     hasCheckout,
+    isWorkingDay,
   });
 
   const payload = {

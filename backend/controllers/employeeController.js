@@ -15,6 +15,11 @@ import {
   normalizeDevicePin,
   normalizeEmployeeId,
 } from "../utils/employeeIds.js";
+import {
+  formatShiftTiming,
+  getCompanyScheduleDefaults,
+  normalizeWorkScheduleInput,
+} from "../utils/workSchedule.js";
 
 const verifyBranchBelongsToCompany = async (branchId, companyId, res) => {
   const branch = await Branch.findOne({ _id: branchId, company: companyId });
@@ -104,11 +109,21 @@ export const createEmployee = asyncHandler(async (req, res) => {
   }
 
   const image = await resolveEmployeeImage(req.body.image);
+  const defaults = await getCompanyScheduleDefaults(req.companyId);
+  const workSchedule = normalizeWorkScheduleInput(
+    req.body.workSchedule,
+    defaults
+  );
+  const shiftTiming =
+    formatShiftTiming(workSchedule.start, workSchedule.end) ||
+    String(req.body.shiftTiming || "").trim();
 
   try {
     const employee = await Employee.create({
       ...req.body,
       image,
+      workSchedule,
+      shiftTiming,
       employeeId,
       devicePin,
       company: req.companyId,
@@ -180,6 +195,19 @@ export const updateEmployee = asyncHandler(async (req, res) => {
     if (!updates.image && existing.image) {
       await destroyEmployeeImage(existing.image);
     }
+  }
+
+  if (updates.workSchedule !== undefined) {
+    const defaults = await getCompanyScheduleDefaults(req.companyId);
+    const merged = normalizeWorkScheduleInput(
+      {
+        ...(existing.workSchedule?.toObject?.() || existing.workSchedule || {}),
+        ...updates.workSchedule,
+      },
+      defaults
+    );
+    updates.workSchedule = merged;
+    updates.shiftTiming = formatShiftTiming(merged.start, merged.end);
   }
 
   try {
