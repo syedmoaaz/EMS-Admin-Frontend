@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest } from "./api";
@@ -5,18 +6,39 @@ import { apiRequest } from "./api";
 const TOKEN_KEY = "ems_field_token";
 const PROFILE_KEY = "ems_field_profile";
 
+const useSecureStore = Platform.OS !== "web";
+
+async function setToken(token) {
+  if (useSecureStore) {
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+  } else {
+    await AsyncStorage.setItem(TOKEN_KEY, token);
+  }
+}
+
+async function removeToken() {
+  if (useSecureStore) {
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  } else {
+    await AsyncStorage.removeItem(TOKEN_KEY);
+  }
+}
+
+export async function getToken() {
+  if (useSecureStore) {
+    return SecureStore.getItemAsync(TOKEN_KEY);
+  }
+  return AsyncStorage.getItem(TOKEN_KEY);
+}
+
 export async function saveSession(token, profile) {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
+  await setToken(token);
   await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(profile || {}));
 }
 
 export async function clearSession() {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await removeToken();
   await AsyncStorage.removeItem(PROFILE_KEY);
-}
-
-export async function getToken() {
-  return SecureStore.getItemAsync(TOKEN_KEY);
 }
 
 export async function getStoredProfile() {
