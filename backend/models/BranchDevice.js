@@ -14,11 +14,14 @@ const branchDeviceSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    deviceSecretHash: {
+    /** Plain device secret chosen in admin — same value pasted into the agent */
+    deviceSecret: {
       type: String,
       required: true,
+      trim: true,
       unique: true,
       index: true,
+      minlength: 14,
     },
     deviceIp: { type: String, trim: true, default: "" },
     devicePort: { type: Number, default: 4370 },

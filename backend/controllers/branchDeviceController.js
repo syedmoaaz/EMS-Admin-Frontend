@@ -2,10 +2,7 @@ import Branch from "../models/Branch.js";
 import BranchDevice from "../models/BranchDevice.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { companyQuery } from "../utils/companyScope.js";
-import {
-  assertDeviceSecretRules,
-  hashDeviceSecret,
-} from "../utils/deviceSecret.js";
+import { assertDeviceSecretRules } from "../utils/deviceSecret.js";
 
 const publicDeviceView = (device) => {
   if (!device) {
@@ -19,8 +16,11 @@ const publicDeviceView = (device) => {
       devicePort: 4370,
       agentVersion: "",
       hasSecret: false,
+      deviceSecret: "",
     };
   }
+
+  const plain = device.deviceSecret || "";
 
   return {
     configured: true,
@@ -31,7 +31,8 @@ const publicDeviceView = (device) => {
     deviceIp: device.deviceIp || "",
     devicePort: device.devicePort || 4370,
     agentVersion: device.agentVersion || "",
-    hasSecret: Boolean(device.deviceSecretHash),
+    hasSecret: Boolean(plain),
+    deviceSecret: plain,
   };
 };
 
@@ -61,7 +62,6 @@ export const getBranchDevice = asyncHandler(async (req, res) => {
 });
 
 // @route  POST /api/branches/:id/device-secret
-// Owner chooses the secret (min 14 chars). Same value is pasted into the agent.
 export const setBranchDeviceSecret = asyncHandler(async (req, res) => {
   const branch = await Branch.findOne(
     companyQuery(req, { _id: req.params.id })
@@ -80,10 +80,8 @@ export const setBranchDeviceSecret = asyncHandler(async (req, res) => {
     throw err;
   }
 
-  const deviceSecretHash = hashDeviceSecret(plaintext);
-
   const conflict = await BranchDevice.findOne({
-    deviceSecretHash,
+    deviceSecret: plaintext,
     branch: { $ne: branch._id },
   });
   if (conflict) {
@@ -93,14 +91,18 @@ export const setBranchDeviceSecret = asyncHandler(async (req, res) => {
     );
   }
 
+  const existing = await BranchDevice.findOne({ branch: branch._id });
+  const isUpdate = Boolean(existing?.deviceSecret);
+
   try {
     const device = await BranchDevice.findOneAndUpdate(
       { branch: branch._id },
       {
         company: req.companyId,
         branch: branch._id,
-        deviceSecretHash,
-        status: "pending",
+        deviceSecret: plaintext,
+        $unset: { deviceSecretHash: 1 },
+        status: existing?.status === "online" ? "online" : "pending",
         lastError: "",
       },
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
@@ -108,8 +110,9 @@ export const setBranchDeviceSecret = asyncHandler(async (req, res) => {
 
     res.json({
       success: true,
-      message:
-        "Device secret saved. Paste the exact same secret into this branch's agent.",
+      message: isUpdate
+        ? "Agent secret updated successfully"
+        : "Agent secret created successfully",
       data: {
         branchId: branch._id,
         branchName: branch.name,

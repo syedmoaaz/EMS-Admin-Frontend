@@ -16,13 +16,20 @@ export const protectDeviceSecret = async (req, res, next) => {
         ? req.headers.authorization.slice(7)
         : null);
 
-    if (!secret || !String(secret).trim()) {
+    const trimmed = String(secret || "").trim();
+
+    if (!trimmed) {
       res.status(401);
       throw new Error("Not authorized, missing device secret");
     }
 
-    const deviceSecretHash = hashDeviceSecret(String(secret).trim());
-    const branchDevice = await BranchDevice.findOne({ deviceSecretHash });
+    // Prefer plain-text secret (current). Fallback: legacy SHA-256 hash field.
+    let branchDevice = await BranchDevice.findOne({ deviceSecret: trimmed });
+
+    if (!branchDevice) {
+      const deviceSecretHash = hashDeviceSecret(trimmed);
+      branchDevice = await BranchDevice.findOne({ deviceSecretHash });
+    }
 
     if (!branchDevice) {
       res.status(401);
