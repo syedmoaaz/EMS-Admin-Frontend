@@ -98,12 +98,14 @@ export const setBranchDeviceSecret = asyncHandler(async (req, res) => {
     const device = await BranchDevice.findOneAndUpdate(
       { branch: branch._id },
       {
-        company: req.companyId,
-        branch: branch._id,
-        deviceSecret: plaintext,
-        $unset: { deviceSecretHash: 1 },
-        status: existing?.status === "online" ? "online" : "pending",
-        lastError: "",
+        $set: {
+          company: req.companyId,
+          branch: branch._id,
+          deviceSecret: plaintext,
+          status: existing?.status === "online" ? "online" : "pending",
+          lastError: "",
+        },
+        $unset: { deviceSecretHash: "" },
       },
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
