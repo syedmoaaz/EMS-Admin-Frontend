@@ -12,9 +12,15 @@ function setIndicator(dotId, textId, cardId, ok, okText, badText, hintId, hintOk
   if (hint) hint.textContent = ok ? hintOk : hintBad;
 }
 
-async function fill() {
+function isEditingForm() {
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA";
+}
+
+async function fillForm() {
   const cfg = await window.emsAgent.getConfig();
-  const state = await window.emsAgent.getState();
   const path = await window.emsAgent.getConfigPath();
 
   document.getElementById("apiUrl").value = cfg.apiUrl || "";
@@ -28,6 +34,11 @@ async function fill() {
   document.getElementById("deviceMode").value = cfg.deviceMode || "mock";
   document.getElementById("openAtLogin").checked = Boolean(cfg.openAtLogin);
   document.getElementById("path").textContent = `Config file: ${path}`;
+}
+
+async function fillStatus() {
+  const cfg = await window.emsAgent.getConfig();
+  const state = await window.emsAgent.getState();
 
   document.getElementById("pendingCount").textContent = String(
     state.pendingCount ?? state.outbox?.pending ?? 0
@@ -74,7 +85,17 @@ async function fill() {
     parts.push(`last pull ${new Date(state.lastPullAt).toLocaleString()}`);
   }
   if (state.lastError) parts.push(state.lastError);
-  status.textContent = parts.join(" · ") || "Idle";
+  // Don't wipe a "Saved..." message while idle
+  if (parts.length) status.textContent = parts.join(" · ");
+}
+
+async function refresh() {
+  await fillStatus();
+  // Never clobber fields while the user is typing
+  if (!isEditingForm()) {
+    // Only re-load form from disk if not editing — still skip to avoid cursor jumps
+    // Form is loaded on start + after Save only
+  }
 }
 
 document.getElementById("form").addEventListener("submit", async (e) => {
@@ -95,6 +116,7 @@ document.getElementById("form").addEventListener("submit", async (e) => {
   await window.emsAgent.saveConfig(next);
   document.getElementById("status").textContent =
     "Saved. Restart agent or click Sync now.";
+  await fillStatus();
 });
 
 document.getElementById("syncBtn").addEventListener("click", async () => {
@@ -102,12 +124,12 @@ document.getElementById("syncBtn").addEventListener("click", async () => {
   status.textContent = "Syncing (pull → outbox → upload)…";
   try {
     await window.emsAgent.syncNow();
-    await fill();
+    await fillStatus();
   } catch (err) {
     status.textContent = err.message || "Sync failed";
-    await fill();
+    await fillStatus();
   }
 });
 
-fill();
-setInterval(fill, 3000);
+fillForm().then(fillStatus);
+setInterval(fillStatus, 3000);

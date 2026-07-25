@@ -3,7 +3,7 @@ import BranchDevice from "../models/BranchDevice.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { companyQuery } from "../utils/companyScope.js";
 import {
-  generateDeviceSecret,
+  assertDeviceSecretRules,
   hashDeviceSecret,
 } from "../utils/deviceSecret.js";
 
@@ -61,7 +61,8 @@ export const getBranchDevice = asyncHandler(async (req, res) => {
 });
 
 // @route  POST /api/branches/:id/device-secret
-export const generateBranchDeviceSecret = asyncHandler(async (req, res) => {
+// Owner chooses the secret (min 14 chars). Same value is pasted into the agent.
+export const setBranchDeviceSecret = asyncHandler(async (req, res) => {
   const branch = await Branch.findOne(
     companyQuery(req, { _id: req.params.id })
   );
@@ -71,56 +72,57 @@ export const generateBranchDeviceSecret = asyncHandler(async (req, res) => {
     throw new Error("Branch not found");
   }
 
-  const plaintext = generateDeviceSecret();
+  let plaintext;
+  try {
+    plaintext = assertDeviceSecretRules(req.body?.deviceSecret);
+  } catch (err) {
+    res.status(400);
+    throw err;
+  }
+
   const deviceSecretHash = hashDeviceSecret(plaintext);
 
-  const device = await BranchDevice.findOneAndUpdate(
-    { branch: branch._id },
-    {
-      company: req.companyId,
-      branch: branch._id,
-      deviceSecretHash,
-      status: "pending",
-      lastError: "",
-    },
-    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
-  );
-
-  res.json({
-    success: true,
-    message:
-      "Copy this device secret now. It will not be shown again. Paste it only into this branch's agent.",
-    data: {
-      branchId: branch._id,
-      branchName: branch.name,
-      deviceSecret: plaintext,
-      ...publicDeviceView(device),
-    },
+  const conflict = await BranchDevice.findOne({
+    deviceSecretHash,
+    branch: { $ne: branch._id },
   });
-});
-
-// @route  DELETE /api/branches/:id/device-secret
-export const revokeBranchDeviceSecret = asyncHandler(async (req, res) => {
-  const branch = await Branch.findOne(
-    companyQuery(req, { _id: req.params.id })
-  );
-
-  if (!branch) {
-    res.status(404);
-    throw new Error("Branch not found");
+  if (conflict) {
+    res.status(400);
+    throw new Error(
+      "This secret is already used by another branch. Choose a different one."
+    );
   }
 
-  const deleted = await BranchDevice.findOneAndDelete(
-    companyQuery(req, { branch: branch._id })
-  );
+  try {
+    const device = await BranchDevice.findOneAndUpdate(
+      { branch: branch._id },
+      {
+        company: req.companyId,
+        branch: branch._id,
+        deviceSecretHash,
+        status: "pending",
+        lastError: "",
+      },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
 
-  if (!deleted) {
-    res.status(404);
-    throw new Error("No device secret configured for this branch");
+    res.json({
+      success: true,
+      message:
+        "Device secret saved. Paste the exact same secret into this branch's agent.",
+      data: {
+        branchId: branch._id,
+        branchName: branch.name,
+        ...publicDeviceView(device),
+      },
+    });
+  } catch (err) {
+    if (err?.code === 11000) {
+      res.status(400);
+      throw new Error(
+        "This secret is already used by another branch. Choose a different one."
+      );
+    }
+    throw err;
   }
-
-  res.json({
-    success: true,
-    message: "Device secret revoked. Branch agent will stop ingesting until a new secret is issued.",
-  });
 });

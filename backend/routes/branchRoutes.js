@@ -8,8 +8,7 @@ import {
 } from "../controllers/branchController.js";
 import {
   getBranchDevice,
-  generateBranchDeviceSecret,
-  revokeBranchDeviceSecret,
+  setBranchDeviceSecret,
 } from "../controllers/branchDeviceController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -20,8 +19,7 @@ router.use(protect);
 router.route("/").get(getBranches).post(createBranch);
 
 router.get("/:id/device", getBranchDevice);
-router.post("/:id/device-secret", generateBranchDeviceSecret);
-router.delete("/:id/device-secret", revokeBranchDeviceSecret);
+router.post("/:id/device-secret", setBranchDeviceSecret);
 
 router.route("/:id").get(getBranch).put(updateBranch).delete(deleteBranch);
 

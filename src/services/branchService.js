@@ -30,12 +30,9 @@ export const getBranchDevice = async (id) => {
   return data;
 };
 
-export const generateBranchDeviceSecret = async (id) => {
-  const { data } = await api.post(`/branches/${id}/device-secret`);
-  return data;
-};
-
-export const revokeBranchDeviceSecret = async (id) => {
-  const { data } = await api.delete(`/branches/${id}/device-secret`);
+export const setBranchDeviceSecret = async (id, deviceSecret) => {
+  const { data } = await api.post(`/branches/${id}/device-secret`, {
+    deviceSecret,
+  });
   return data;
 };

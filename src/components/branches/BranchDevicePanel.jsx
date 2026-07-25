@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { KeyRound, Copy, RefreshCw, Ban, Fingerprint } from "lucide-react";
+import { KeyRound, RefreshCw, Fingerprint } from "lucide-react";
 import toast from "react-hot-toast";
 import * as branchService from "../../services/branchService";
+
+const MIN_SECRET_LEN = 14;
 
 const statusStyles = {
   online: "bg-green-100 text-green-700",
@@ -14,7 +16,8 @@ const BranchDevicePanel = ({ branchId, open }) => {
   const [device, setDevice] = useState(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [plainSecret, setPlainSecret] = useState("");
+  const [secret, setSecret] = useState("");
+  const [confirmSecret, setConfirmSecret] = useState("");
 
   const load = useCallback(async () => {
     if (!branchId) return;
@@ -31,60 +34,48 @@ const BranchDevicePanel = ({ branchId, open }) => {
 
   useEffect(() => {
     if (open && branchId) {
-      setPlainSecret("");
+      setSecret("");
+      setConfirmSecret("");
       load();
     }
   }, [open, branchId, load]);
 
-  const generateSecret = async () => {
+  const saveSecret = async () => {
+    const value = secret.trim();
+    if (value.length < MIN_SECRET_LEN) {
+      toast.error(`Secret must be at least ${MIN_SECRET_LEN} characters.`);
+      return;
+    }
+    if (/\s/.test(value)) {
+      toast.error("Secret must not contain spaces.");
+      return;
+    }
+    if (value !== confirmSecret.trim()) {
+      toast.error("Secret and confirm secret do not match.");
+      return;
+    }
+
     const confirmed = window.confirm(
-      plainSecret || device?.hasSecret
-        ? "Rotate device secret? The current agent will stop working until you paste the new secret."
-        : "Generate a device secret for this branch only? Do not reuse it on another branch."
+      device?.hasSecret
+        ? "Update this branch device secret? Update the Windows agent with the same secret or uploads will fail."
+        : "Save this device secret for this branch only? Use the exact same secret in the branch agent."
     );
     if (!confirmed) return;
 
     setBusy(true);
     try {
-      const { data, message } = await branchService.generateBranchDeviceSecret(
-        branchId
+      const { data, message } = await branchService.setBranchDeviceSecret(
+        branchId,
+        value
       );
       setDevice(data);
-      setPlainSecret(data.deviceSecret || "");
-      toast.success(message || "Device secret generated — copy it now");
+      setSecret("");
+      setConfirmSecret("");
+      toast.success(message || "Device secret saved");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to generate secret");
+      toast.error(err.response?.data?.message || "Failed to save secret");
     } finally {
       setBusy(false);
-    }
-  };
-
-  const revokeSecret = async () => {
-    const confirmed = window.confirm(
-      "Revoke this branch device secret? The agent will stop syncing until you generate a new one."
-    );
-    if (!confirmed) return;
-
-    setBusy(true);
-    try {
-      await branchService.revokeBranchDeviceSecret(branchId);
-      setPlainSecret("");
-      await load();
-      toast.success("Device secret revoked");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to revoke secret");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const copySecret = async () => {
-    if (!plainSecret) return;
-    try {
-      await navigator.clipboard.writeText(plainSecret);
-      toast.success("Secret copied");
-    } catch {
-      toast.error("Could not copy — select and copy manually");
     }
   };
 
@@ -99,10 +90,10 @@ const BranchDevicePanel = ({ branchId, open }) => {
         <div>
           <h3 className="font-semibold text-slate-900">Biometric device agent</h3>
           <p className="text-xs text-slate-500 mt-1">
-            Each branch needs its own device secret so attendance never mixes with
-            other branches. Paste the secret only into this branch&apos;s Windows
-            agent. Enroll staff on the K50 using their numeric Device PIN (not
-            Employee ID like THT-1).
+            Choose a device secret for this branch, then paste the{" "}
+            <strong>same</strong> secret into the Windows agent. Do not reuse it
+            on another branch. Enroll staff on the K50 using their numeric Device
+            PIN (not Employee ID like THT-1).
           </p>
         </div>
       </div>
@@ -121,6 +112,11 @@ const BranchDevicePanel = ({ branchId, open }) => {
             >
               {device?.hasSecret ? device.status : "not configured"}
             </span>
+            {device?.hasSecret ? (
+              <span className="text-xs text-slate-500">Secret is set</span>
+            ) : (
+              <span className="text-xs text-amber-700">Secret not set yet</span>
+            )}
             {device?.lastSyncAt && (
               <span className="text-slate-500 text-xs">
                 Last sync: {new Date(device.lastSyncAt).toLocaleString()}
@@ -137,38 +133,56 @@ const BranchDevicePanel = ({ branchId, open }) => {
             <p className="text-xs text-red-600 mb-3">{device.lastError}</p>
           ) : null}
 
-          {plainSecret ? (
-            <div className="mb-4 rounded-xl bg-white border border-amber-200 p-3">
-              <p className="text-xs font-semibold text-amber-800 mb-2">
-                Copy now — this secret will not be shown again
-              </p>
-              <div className="flex gap-2">
-                <input
-                  readOnly
-                  value={plainSecret}
-                  className="flex-1 text-xs font-mono border rounded-lg px-3 py-2 bg-slate-50"
-                />
-                <button
-                  type="button"
-                  onClick={copySecret}
-                  className="px-3 py-2 rounded-lg border bg-white hover:bg-slate-50 inline-flex items-center gap-1 text-sm"
-                >
-                  <Copy size={14} />
-                  Copy
-                </button>
-              </div>
+          <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 mb-4">
+            <p className="text-xs text-amber-900 font-medium">
+              Precautions
+            </p>
+            <ul className="mt-1 text-xs text-amber-800 list-disc pl-4 space-y-0.5">
+              <li>Secret must be at least {MIN_SECRET_LEN} characters</li>
+              <li>No spaces</li>
+              <li>One secret per branch — never share across branches</li>
+              <li>Use the exact same value in the Electron agent</li>
+            </ul>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                {device?.hasSecret ? "New device secret" : "Device secret"}
+              </label>
+              <input
+                type="password"
+                value={secret}
+                onChange={(e) => setSecret(e.target.value)}
+                autoComplete="new-password"
+                placeholder={`Min. ${MIN_SECRET_LEN} characters`}
+                className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white"
+              />
             </div>
-          ) : null}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                Confirm secret
+              </label>
+              <input
+                type="password"
+                value={confirmSecret}
+                onChange={(e) => setConfirmSecret(e.target.value)}
+                autoComplete="new-password"
+                placeholder="Repeat secret"
+                className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white"
+              />
+            </div>
+          </div>
 
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               disabled={busy}
-              onClick={generateSecret}
+              onClick={saveSecret}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-70"
             >
               <KeyRound size={16} />
-              {device?.hasSecret ? "Rotate secret" : "Generate secret"}
+              {device?.hasSecret ? "Update secret" : "Save secret"}
             </button>
 
             <button
@@ -180,18 +194,6 @@ const BranchDevicePanel = ({ branchId, open }) => {
               <RefreshCw size={16} />
               Refresh status
             </button>
-
-            {device?.hasSecret ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={revokeSecret}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-red-600 text-sm hover:bg-red-50 disabled:opacity-70"
-              >
-                <Ban size={16} />
-                Revoke
-              </button>
-            ) : null}
           </div>
         </>
       )}
