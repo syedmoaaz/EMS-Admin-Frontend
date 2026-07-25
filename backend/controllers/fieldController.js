@@ -16,6 +16,10 @@ import {
   formatClock,
   toDateKey,
 } from "../services/attendanceIngestService.js";
+import {
+  companyWallTimeOnDay,
+  weekdayNameInCompanyTz,
+} from "../utils/companyTime.js";
 
 const parseOfficeStart = (startStr = "09:00 AM") => {
   const match = String(startStr)
@@ -31,9 +35,6 @@ const parseOfficeStart = (startStr = "09:00 AM") => {
   return { hours, minutes };
 };
 
-const weekdayName = (date) =>
-  new Date(date).toLocaleDateString("en-US", { weekday: "long" });
-
 const computeHours = (checkInStr, checkOutStr, dateKey) => {
   const parse = (clock) => {
     const m = String(clock)
@@ -45,9 +46,10 @@ const computeHours = (checkInStr, checkOutStr, dateKey) => {
     const ampm = m[3].toUpperCase();
     if (ampm === "PM" && h !== 12) h += 12;
     if (ampm === "AM" && h === 12) h = 0;
-    const d = new Date(`${dateKey}T00:00:00`);
-    d.setHours(h, min, 0, 0);
-    return d;
+    // dateKey is Pakistan calendar day
+    const [y, mo, d] = String(dateKey).split("-").map(Number);
+    if (!y || !mo || !d) return null;
+    return companyWallTimeOnDay(new Date(Date.UTC(y, mo - 1, d, 12, 0, 0)), h, min);
   };
   const a = parse(checkInStr);
   const b = parse(checkOutStr);
@@ -60,12 +62,17 @@ const resolveCheckInStatus = (employee, punchedAt) => {
   return (async () => {
     const defaults = await getCompanyScheduleDefaults(employee.company);
     const schedule = resolveEmployeeSchedule(employee, defaults);
-    const isWorkingDay = schedule.workingDays.includes(weekdayName(punchedAt));
+    const isWorkingDay = schedule.workingDays.includes(
+      weekdayNameInCompanyTz(punchedAt)
+    );
     if (!isWorkingDay) return "Working";
 
     const { hours, minutes } = parseOfficeStart(schedule.start);
-    const threshold = new Date(punchedAt);
-    threshold.setHours(hours, minutes + (schedule.lateThresholdMinutes || 0), 0, 0);
+    const threshold = companyWallTimeOnDay(
+      punchedAt,
+      hours,
+      minutes + (schedule.lateThresholdMinutes || 0)
+    );
     return punchedAt > threshold ? "Late" : "Working";
   })();
 };

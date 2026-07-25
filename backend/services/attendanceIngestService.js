@@ -6,22 +6,14 @@ import {
   getCompanyScheduleDefaults,
   resolveEmployeeSchedule,
 } from "../utils/workSchedule.js";
+import {
+  companyWallTimeOnDay,
+  formatClock,
+  toDateKey,
+  weekdayNameInCompanyTz,
+} from "../utils/companyTime.js";
 
-const pad = (n) => String(n).padStart(2, "0");
-
-export const toDateKey = (date = new Date()) => {
-  const d = date instanceof Date ? date : new Date(date);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-};
-
-export const formatClock = (date) => {
-  const d = date instanceof Date ? date : new Date(date);
-  let hours = d.getHours();
-  const minutes = pad(d.getMinutes());
-  const ampm = hours >= 12 ? "PM" : "AM";
-  hours = hours % 12 || 12;
-  return `${pad(hours)}:${minutes} ${ampm}`;
-};
+export { toDateKey, formatClock };
 
 const parseOfficeStart = (startStr = "09:00 AM") => {
   const match = String(startStr)
@@ -46,9 +38,6 @@ const computeHours = (first, last) => {
   return `${h}h ${m}m`;
 };
 
-const weekdayName = (date) =>
-  new Date(date).toLocaleDateString("en-US", { weekday: "long" });
-
 const resolveStatus = ({
   firstPunch,
   officeStart,
@@ -61,8 +50,11 @@ const resolveStatus = ({
   }
 
   const { hours, minutes } = parseOfficeStart(officeStart);
-  const threshold = new Date(firstPunch);
-  threshold.setHours(hours, minutes + lateThresholdMinutes, 0, 0);
+  const threshold = companyWallTimeOnDay(
+    firstPunch,
+    hours,
+    minutes + (lateThresholdMinutes || 0)
+  );
 
   if (!hasCheckout) {
     return firstPunch > threshold ? "Late" : "Working";
@@ -122,7 +114,9 @@ export const deriveDailyAttendance = async ({
 
   const companyDefaults = await getCompanyScheduleDefaults(companyId);
   const schedule = resolveEmployeeSchedule(employeeDoc, companyDefaults);
-  const isWorkingDay = schedule.workingDays.includes(weekdayName(first));
+  const isWorkingDay = schedule.workingDays.includes(
+    weekdayNameInCompanyTz(first)
+  );
 
   const status = resolveStatus({
     firstPunch: first,
@@ -187,7 +181,8 @@ export const ingestPunches = async ({
         continue;
       }
 
-      const date = punch.date || toDateKey(punchedAt);
+      // Always use Pakistan calendar day (ignore agent UTC date slice)
+      const date = toDateKey(punchedAt);
       const employee = await findEmployeeByDevicePin(companyId, devicePin);
 
       try {
@@ -195,7 +190,7 @@ export const ingestPunches = async ({
           company: companyId,
           branch: branchId,
           employee: employee?._id || null,
-          employeeId: devicePin, // store PIN in log key field
+          employeeId: devicePin,
           punchedAt,
           date,
           deviceSerial: deviceSerial || punch.deviceSerial || "",
