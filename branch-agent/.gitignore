@@ -3,3 +3,8 @@ logs/
 *.log
 config.json
 node_modules/
+dist/
+tools/
+*.exe
+nssm.zip
+nssm-extract/

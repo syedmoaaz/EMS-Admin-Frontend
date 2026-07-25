@@ -6,10 +6,15 @@ import os from "os";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AGENT_ROOT = path.resolve(__dirname, "..");
 
-/** Prefer project-local data/ next to agent (like advanced agent); fall back to home. */
+/**
+ * Writable base for config/outbox/logs.
+ * Always under the user profile so Program Files installs work.
+ */
 export const getBaseDir = () => {
-  if (process.pkg) return path.dirname(process.execPath);
-  return AGENT_ROOT;
+  if (process.env.EMS_AGENT_DATA) {
+    return path.resolve(process.env.EMS_AGENT_DATA);
+  }
+  return path.join(os.homedir(), ".ems-branch-agent");
 };
 
 export const ensureDir = (dirPath) => {
@@ -28,9 +33,12 @@ export const logsDir = () => {
   return dir;
 };
 
-/** Legacy home config still used for Electron settings compatibility. */
+/** Same folder as data — config.json lives here */
 export const homeConfigDir = () => {
-  const dir = path.join(os.homedir(), ".ems-branch-agent");
+  const dir = getBaseDir();
   ensureDir(dir);
   return dir;
 };
+
+/** Project root (source / unpacked resources) — not for writable data */
+export const getAgentRoot = () => AGENT_ROOT;

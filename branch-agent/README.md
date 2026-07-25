@@ -39,6 +39,20 @@ npm install
 npm install node-zklib
 ```
 
+### Dev run
+
+```bash
+npm start
+```
+
+### Production EXE (no Node on branch PC)
+
+See **[INSTALL.md](./INSTALL.md)**.
+
+```bash
+npm run dist
+```
+
 Configure via Electron Settings or:
 
 ```bash

@@ -34,6 +34,18 @@ async function fillForm() {
   document.getElementById("deviceMode").value = cfg.deviceMode || "mock";
   document.getElementById("openAtLogin").checked = Boolean(cfg.openAtLogin);
   document.getElementById("path").textContent = `Config file: ${path}`;
+
+  try {
+    const info = await window.emsAgent.getAppInfo?.();
+    const el = document.getElementById("appInfo");
+    if (el && info) {
+      el.textContent = info.packaged
+        ? `Installed app v${info.version}`
+        : `Dev mode v${info.version}`;
+    }
+  } catch {
+    // older preload
+  }
 }
 
 async function fillStatus() {

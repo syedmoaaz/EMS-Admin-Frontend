@@ -1,34 +1,29 @@
 import fs from "fs";
 import path from "path";
-import os from "os";
-
-const CONFIG_DIR = path.join(os.homedir(), ".ems-branch-agent");
-const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
+import { homeConfigDir } from "./paths.js";
 
 const defaults = {
-  apiUrl: "http://localhost:5000/api",
+  apiUrl: "https://ems-backend-production-9972.up.railway.app/api",
   deviceSecret: "",
   deviceIp: "192.168.1.201",
   devicePort: 4370,
-  /** Device poll interval (seconds) — LAN pull into outbox */
   pollIntervalSeconds: 5,
-  /** Backend sync interval (seconds) — drain outbox when online */
   syncIntervalSeconds: 3,
   lookbackDays: 7,
   uploadBatchSize: 50,
-  deviceMode: "mock", // "mock" | "zk"
+  deviceMode: "zk",
   openAtLogin: true,
-  /** Keep false until verified on your K50 firmware */
   clearDeviceAfterQueue: false,
 };
 
-export const getConfigPath = () => CONFIG_FILE;
-export const getConfigDir = () => CONFIG_DIR;
+export const getConfigDir = () => homeConfigDir();
+export const getConfigPath = () => path.join(getConfigDir(), "config.json");
 
 export const loadConfig = () => {
   try {
-    if (!fs.existsSync(CONFIG_FILE)) return { ...defaults };
-    const raw = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
+    const file = getConfigPath();
+    if (!fs.existsSync(file)) return { ...defaults };
+    const raw = JSON.parse(fs.readFileSync(file, "utf8"));
     return { ...defaults, ...raw };
   } catch {
     return { ...defaults };
@@ -36,10 +31,9 @@ export const loadConfig = () => {
 };
 
 export const saveConfig = (next) => {
-  if (!fs.existsSync(CONFIG_DIR)) {
-    fs.mkdirSync(CONFIG_DIR, { recursive: true });
-  }
+  const dir = getConfigDir();
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   const merged = { ...defaults, ...loadConfig(), ...next };
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(merged, null, 2), "utf8");
+  fs.writeFileSync(getConfigPath(), JSON.stringify(merged, null, 2), "utf8");
   return merged;
 };

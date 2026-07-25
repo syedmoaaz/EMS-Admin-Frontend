@@ -6,4 +6,5 @@ contextBridge.exposeInMainWorld("emsAgent", {
   getState: () => ipcRenderer.invoke("get-state"),
   getConfigPath: () => ipcRenderer.invoke("get-config-path"),
   syncNow: () => ipcRenderer.invoke("sync-now"),
+  getAppInfo: () => ipcRenderer.invoke("get-app-info"),
 });
