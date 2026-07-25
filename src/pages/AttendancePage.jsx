@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { UserCheck, UserX, Clock3, Plane } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { UserCheck, UserX, Clock3, Plane, Radio } from "lucide-react";
 import toast from "react-hot-toast";
 
 import AttendanceStatsCard from "../components/attendance/AttendanceStatsCard";
@@ -8,16 +8,27 @@ import AttendanceTable from "../components/attendance/AttendanceTable";
 import AttendanceHistoryDrawer from "../components/attendance/AttendanceHistoryDrawer";
 import * as attendanceService from "../services/attendanceService";
 import * as branchService from "../services/branchService";
+import {
+  attendanceFingerprint,
+  playAttendanceChime,
+  unlockAttendanceAudio,
+} from "../utils/attendanceLive";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const todayLocal = () => {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
 const PAGE_SIZE = 10;
+const LIVE_POLL_MS = 4000;
 
 const AttendancePage = () => {
   const [search, setSearch] = useState("");
   const [branch, setBranch] = useState("all");
   const [method, setMethod] = useState("all");
   const [status, setStatus] = useState("all");
-  const [date, setDate] = useState(today());
+  const [date, setDate] = useState(todayLocal());
   const [branches, setBranches] = useState([]);
   const [records, setRecords] = useState([]);
   const [statsData, setStatsData] = useState({
@@ -27,9 +38,19 @@ const AttendancePage = () => {
     onLeave: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [live, setLive] = useState(true);
+  const [pollCount, setPollCount] = useState(0);
+  const [lastLiveAt, setLastLiveAt] = useState(null);
   const [error, setError] = useState("");
   const [historyRecord, setHistoryRecord] = useState(null);
   const [page, setPage] = useState(1);
+
+  const fingerprintRef = useRef("");
+  const readyRef = useRef(false);
+  const filtersRef = useRef({ search, branch, method, status, date });
+  const inFlightRef = useRef(false);
+
+  filtersRef.current = { search, branch, method, status, date };
 
   const loadBranches = useCallback(async () => {
     try {
@@ -40,45 +61,108 @@ const AttendancePage = () => {
     }
   }, []);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const fetchAttendance = useCallback(async ({ silent = false } = {}) => {
+    if (inFlightRef.current && silent) return;
+    inFlightRef.current = true;
+
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
+
+    const { search: q, branch: b, method: m, status: s, date: d } =
+      filtersRef.current;
 
     try {
-      const params = { date };
-      if (search.trim()) params.search = search.trim();
-      if (branch !== "all") params.branch = branch;
-      if (method !== "all") params.method = method;
-      if (status !== "all") params.status = status;
+      const params = {
+        date: d,
+        // bust any intermediary/browser GET cache
+        _ts: Date.now(),
+      };
+      if (q.trim()) params.search = q.trim();
+      if (b !== "all") params.branch = b;
+      if (m !== "all") params.method = m;
+      if (s !== "all") params.status = s;
 
       const [listRes, statsRes] = await Promise.all([
         attendanceService.getAttendance(params),
-        attendanceService.getAttendanceStats({ date }),
+        attendanceService.getAttendanceStats({ date: d, _ts: Date.now() }),
       ]);
 
-      setRecords(listRes.data || []);
+      const nextRecords = listRes.data || [];
+      const nextFp = attendanceFingerprint(nextRecords);
+
+      if (
+        silent &&
+        readyRef.current &&
+        fingerprintRef.current &&
+        nextFp !== fingerprintRef.current
+      ) {
+        playAttendanceChime();
+        toast.success("New attendance update", { duration: 2500 });
+      }
+
+      fingerprintRef.current = nextFp;
+      readyRef.current = true;
+      setRecords(nextRecords);
       setStatsData(
         statsRes.data || { present: 0, absent: 0, late: 0, onLeave: 0 }
       );
+      setLastLiveAt(new Date());
+      if (silent) setPollCount((n) => n + 1);
+      setError("");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load attendance.");
-      setRecords([]);
+      if (!silent) {
+        setError(err.response?.data?.message || "Failed to load attendance.");
+        setRecords([]);
+      }
     } finally {
-      setLoading(false);
+      inFlightRef.current = false;
+      if (!silent) setLoading(false);
     }
-  }, [search, branch, method, status, date]);
+  }, []);
 
   useEffect(() => {
     loadBranches();
   }, [loadBranches]);
 
+  // Reset fingerprint when filters change, then load
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadData();
-    }, search ? 300 : 0);
-
+    readyRef.current = false;
+    fingerprintRef.current = "";
+    const timer = setTimeout(
+      () => {
+        fetchAttendance({ silent: false });
+      },
+      search ? 300 : 0
+    );
     return () => clearTimeout(timer);
-  }, [loadData, search]);
+  }, [search, branch, method, status, date, fetchAttendance]);
+
+  // Stable live polling (does not depend on fetchAttendance identity churn)
+  useEffect(() => {
+    if (!live) return undefined;
+
+    const tick = () => {
+      if (document.hidden) return;
+      fetchAttendance({ silent: true });
+    };
+
+    // first silent poll shortly after mount so user sees "Updated" move
+    const kickoff = setTimeout(tick, 1500);
+    const id = setInterval(tick, LIVE_POLL_MS);
+
+    const onVisible = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      clearTimeout(kickoff);
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [live, fetchAttendance]);
 
   useEffect(() => {
     setPage(1);
@@ -88,6 +172,16 @@ const AttendancePage = () => {
     const start = (page - 1) * PAGE_SIZE;
     return records.slice(start, start + PAGE_SIZE);
   }, [records, page]);
+
+  const toggleLive = () => {
+    unlockAttendanceAudio();
+    // Test chime when turning live on so user knows sound works
+    if (!live) {
+      playAttendanceChime();
+      toast.success("Live updates on — sound unlocked", { duration: 2000 });
+    }
+    setLive((v) => !v);
+  };
 
   const exportCsv = () => {
     if (!records.length) {
@@ -109,8 +203,7 @@ const AttendancePage = () => {
 
     const rows = records.map((record) => {
       const emp = record.employee || {};
-      const branchName =
-        record.branch?.name || emp.branch?.name || "";
+      const branchName = record.branch?.name || emp.branch?.name || "";
       return [
         emp.name || "",
         emp.employeeId || "",
@@ -187,17 +280,48 @@ const AttendancePage = () => {
           <h1 className="text-2xl sm:text-3xl font-bold mt-1">Attendance</h1>
 
           <p className="text-slate-500 mt-1 text-sm sm:text-base">
-            Monitor today's attendance across all branches.
+            Monitor today&apos;s attendance across all branches.
           </p>
+
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium ${
+                live
+                  ? "bg-green-50 text-green-700"
+                  : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              <Radio size={12} className={live ? "animate-pulse" : ""} />
+              {live ? "Live · every 4s" : "Live paused"}
+            </span>
+            {lastLiveAt && (
+              <span>
+                Updated {lastLiveAt.toLocaleTimeString()}
+                {live ? ` · polls ${pollCount}` : ""}
+              </span>
+            )}
+          </div>
         </div>
 
-        <button
-          type="button"
-          onClick={loadData}
-          className="bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl font-medium w-full sm:w-auto"
-        >
-          Refresh Live
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={toggleLive}
+            className="border border-slate-200 hover:bg-slate-50 transition px-5 py-3 rounded-xl font-medium w-full sm:w-auto"
+          >
+            {live ? "Pause live" : "Resume live"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              unlockAttendanceAudio();
+              fetchAttendance({ silent: false });
+            }}
+            className="bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-3 rounded-xl font-medium w-full sm:w-auto"
+          >
+            Refresh now
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
