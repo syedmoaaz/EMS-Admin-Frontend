@@ -148,6 +148,20 @@ const EmployeeLocationDrawer = ({ open, onClose, record }) => {
                 </div>
               </div>
 
+              <div className="mt-4 border rounded-2xl p-4 bg-slate-50">
+                <p className="text-sm text-slate-500">Distance today (app field work)</p>
+                <p className="text-2xl font-bold mt-1 text-slate-900">
+                  {record.todayDistanceLabel || "0 km"}
+                </p>
+                <p className="text-xs text-slate-500 mt-2">
+                  {record.fieldSessionOpen
+                    ? `Field session open${record.fieldCheckIn ? ` since ${record.fieldCheckIn}` : ""}`
+                    : record.fieldCheckIn
+                      ? `Last field: ${record.fieldCheckIn} → ${record.fieldCheckOut || "--"}`
+                      : "No app field check-in today (biometric alone does not start distance)"}
+                </p>
+              </div>
+
               <div className="mt-6 border rounded-2xl p-4">
                 <div className="flex items-center gap-2 text-slate-500 text-sm">
                   <MapPin size={16} className="text-red-500" />

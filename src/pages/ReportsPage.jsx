@@ -161,7 +161,7 @@ const ReportsPage = () => {
     } else {
       downloadCsv(
         `tracking-${today()}.csv`,
-        ["Employee", "Branch", "Status", "Online", "Battery", "Speed", "Location"],
+        ["Employee", "Branch", "Status", "Online", "Battery", "Speed", "Distance today", "Location"],
         rows.map((r) => [
           r.employee?.name,
           r.employee?.branch?.name,
@@ -169,6 +169,7 @@ const ReportsPage = () => {
           r.online ? "Yes" : "No",
           r.battery,
           r.speed,
+          r.todayDistanceLabel || "0 km",
           r.location,
         ])
       );
@@ -372,6 +373,7 @@ const ReportsPage = () => {
                     <th className="px-5 py-3">Status</th>
                     <th className="px-5 py-3">Online</th>
                     <th className="px-5 py-3">Battery</th>
+                    <th className="px-5 py-3">Distance</th>
                     <th className="px-5 py-3">Location</th>
                   </tr>
                 )}
@@ -411,6 +413,9 @@ const ReportsPage = () => {
                         {r.online ? "Yes" : "No"}
                       </td>
                       <td className="px-5 py-3">{r.battery}</td>
+                      <td className="px-5 py-3">
+                        {r.todayDistanceLabel || "0 km"}
+                      </td>
                       <td className="px-5 py-3">{r.location}</td>
                     </tr>
                   ))}

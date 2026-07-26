@@ -141,6 +141,19 @@ const OnlineEmployees = ({
                   </div>
                 </div>
 
+                <div className="mt-3 flex items-center justify-between text-sm">
+                  <span className="text-slate-500">Distance today</span>
+                  <span className="font-semibold text-slate-800">
+                    {record.todayDistanceLabel || "0 km"}
+                  </span>
+                </div>
+                {record.fieldSessionOpen ? (
+                  <p className="mt-1 text-xs text-green-700 font-medium">
+                    Field session open
+                    {record.fieldCheckIn ? ` · since ${record.fieldCheckIn}` : ""}
+                  </p>
+                ) : null}
+
                 <div className="mt-4 bg-slate-50 rounded-xl px-3 py-2 text-sm text-slate-600">
                   {record.location && record.location !== "--"
                     ? record.location

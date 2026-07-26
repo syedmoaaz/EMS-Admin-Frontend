@@ -4,6 +4,7 @@ import Employee, {
 } from "../models/Employee.js";
 import Tracking from "../models/Tracking.js";
 import Attendance from "../models/Attendance.js";
+import FieldSession from "../models/FieldSession.js";
 import Settings from "../models/Settings.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { generateEmployeeToken } from "../utils/generateToken.js";
@@ -20,6 +21,7 @@ import {
   companyWallTimeOnDay,
   weekdayNameInCompanyTz,
 } from "../utils/companyTime.js";
+import { formatDistanceKm, segmentKm } from "../utils/geoDistance.js";
 
 const parseOfficeStart = (startStr = "09:00 AM") => {
   const match = String(startStr)
@@ -46,7 +48,6 @@ const computeHours = (checkInStr, checkOutStr, dateKey) => {
     const ampm = m[3].toUpperCase();
     if (ampm === "PM" && h !== 12) h += 12;
     if (ampm === "AM" && h === 12) h = 0;
-    // dateKey is Pakistan calendar day
     const [y, mo, d] = String(dateKey).split("-").map(Number);
     if (!y || !mo || !d) return null;
     return companyWallTimeOnDay(new Date(Date.UTC(y, mo - 1, d, 12, 0, 0)), h, min);
@@ -58,23 +59,47 @@ const computeHours = (checkInStr, checkOutStr, dateKey) => {
   return `${Math.floor(totalMins / 60)}h ${totalMins % 60}m`;
 };
 
-const resolveCheckInStatus = (employee, punchedAt) => {
-  return (async () => {
-    const defaults = await getCompanyScheduleDefaults(employee.company);
-    const schedule = resolveEmployeeSchedule(employee, defaults);
-    const isWorkingDay = schedule.workingDays.includes(
-      weekdayNameInCompanyTz(punchedAt)
-    );
-    if (!isWorkingDay) return "Working";
+const resolveCheckInStatus = async (employee, punchedAt) => {
+  const defaults = await getCompanyScheduleDefaults(employee.company);
+  const schedule = resolveEmployeeSchedule(employee, defaults);
+  const isWorkingDay = schedule.workingDays.includes(
+    weekdayNameInCompanyTz(punchedAt)
+  );
+  if (!isWorkingDay) return "Working";
 
-    const { hours, minutes } = parseOfficeStart(schedule.start);
-    const threshold = companyWallTimeOnDay(
-      punchedAt,
-      hours,
-      minutes + (schedule.lateThresholdMinutes || 0)
-    );
-    return punchedAt > threshold ? "Late" : "Working";
-  })();
+  const { hours, minutes } = parseOfficeStart(schedule.start);
+  const threshold = companyWallTimeOnDay(
+    punchedAt,
+    hours,
+    minutes + (schedule.lateThresholdMinutes || 0)
+  );
+  return punchedAt > threshold ? "Late" : "Working";
+};
+
+const branchIdOf = (employee) =>
+  typeof employee.branch === "object" ? employee.branch._id : employee.branch;
+
+const serializeSession = (session) => {
+  if (!session) return null;
+  const obj = typeof session.toObject === "function" ? session.toObject() : { ...session };
+  return {
+    ...obj,
+    distanceLabel: formatDistanceKm(obj.distanceKm),
+  };
+};
+
+const todayDistanceForEmployee = async (companyId, employeeId, date) => {
+  const sessions = await FieldSession.find({
+    company: companyId,
+    employee: employeeId,
+    date,
+  }).select("distanceKm status checkIn checkOut");
+  const distanceKm = sessions.reduce((sum, s) => sum + (Number(s.distanceKm) || 0), 0);
+  return {
+    distanceKm,
+    distanceLabel: formatDistanceKm(distanceKm),
+    sessionCount: sessions.length,
+  };
 };
 
 // @route  POST /api/field/login
@@ -125,15 +150,20 @@ export const fieldLogin = asyncHandler(async (req, res) => {
   });
 
   const today = toDateKey(new Date());
-  const attendance = await Attendance.findOne({
-    company: employee.company,
-    employee: employee._id,
-    date: today,
-  });
-
-  const settings = await Settings.findOne({ company: employee.company }).select(
-    "gpsRules"
-  );
+  const [attendance, activeSession, distanceSummary, settings] = await Promise.all([
+    Attendance.findOne({
+      company: employee.company,
+      employee: employee._id,
+      date: today,
+    }),
+    FieldSession.findOne({
+      company: employee.company,
+      employee: employee._id,
+      status: "Open",
+    }),
+    todayDistanceForEmployee(employee.company, employee._id, today),
+    Settings.findOne({ company: employee.company }).select("gpsRules"),
+  ]);
 
   res.json({
     success: true,
@@ -141,8 +171,9 @@ export const fieldLogin = asyncHandler(async (req, res) => {
     data: {
       ...sanitizeEmployee(employee),
       todayAttendance: attendance || null,
-      gpsRefreshSeconds:
-        settings?.gpsRules?.refreshIntervalSeconds ?? 30,
+      activeFieldSession: serializeSession(activeSession),
+      todayFieldDistance: distanceSummary,
+      gpsRefreshSeconds: settings?.gpsRules?.refreshIntervalSeconds ?? 30,
     },
   });
 });
@@ -150,20 +181,25 @@ export const fieldLogin = asyncHandler(async (req, res) => {
 // @route  GET /api/field/me
 export const fieldMe = asyncHandler(async (req, res) => {
   const today = toDateKey(new Date());
-  const attendance = await Attendance.findOne({
-    company: req.companyId,
-    employee: req.employeeId,
-    date: today,
-  });
-
-  const tracking = await Tracking.findOne({
-    company: req.companyId,
-    employee: req.employeeId,
-  });
-
-  const settings = await Settings.findOne({ company: req.companyId }).select(
-    "gpsRules"
-  );
+  const [attendance, tracking, activeSession, distanceSummary, settings] =
+    await Promise.all([
+      Attendance.findOne({
+        company: req.companyId,
+        employee: req.employeeId,
+        date: today,
+      }),
+      Tracking.findOne({
+        company: req.companyId,
+        employee: req.employeeId,
+      }),
+      FieldSession.findOne({
+        company: req.companyId,
+        employee: req.employeeId,
+        status: "Open",
+      }),
+      todayDistanceForEmployee(req.companyId, req.employeeId, today),
+      Settings.findOne({ company: req.companyId }).select("gpsRules"),
+    ]);
 
   res.json({
     success: true,
@@ -171,8 +207,9 @@ export const fieldMe = asyncHandler(async (req, res) => {
       ...sanitizeEmployee(req.employee),
       todayAttendance: attendance || null,
       tracking: tracking || null,
-      gpsRefreshSeconds:
-        settings?.gpsRules?.refreshIntervalSeconds ?? 30,
+      activeFieldSession: serializeSession(activeSession),
+      todayFieldDistance: distanceSummary,
+      gpsRefreshSeconds: settings?.gpsRules?.refreshIntervalSeconds ?? 30,
     },
   });
 });
@@ -191,12 +228,60 @@ export const fieldTrackingUpdate = asyncHandler(async (req, res) => {
     gpsDisabled,
   } = req.body;
 
+  const openSession = await FieldSession.findOne({
+    company: req.companyId,
+    employee: employee._id,
+    status: "Open",
+  });
+
+  // Logout / explicit offline — always allow marking offline
+  const forceOffline = online === false && !gpsDisabled;
+
+  if (!openSession && !forceOffline) {
+    // No field duty — keep map offline; do not accumulate distance
+    const record = await Tracking.findOneAndUpdate(
+      { company: req.companyId, employee: employee._id },
+      {
+        company: req.companyId,
+        employee: employee._id,
+        lat: lat ?? null,
+        lng: lng ?? null,
+        battery: battery ?? "--",
+        speed: "--",
+        location: location || "--",
+        status: "Offline",
+        online: false,
+        lastUpdated: Date.now(),
+      },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+    return res.json({
+      success: true,
+      data: record,
+      fieldSession: null,
+      message: "No open field session — tracking idle",
+    });
+  }
+
   let nextStatus = status;
   if (gpsDisabled === true) nextStatus = "GPS Disabled";
   if (!nextStatus) {
     if (online === false) nextStatus = "Offline";
     else if (Number(speed) > 0) nextStatus = "Moving";
     else nextStatus = "Stationary";
+  }
+
+  let sessionPayload = null;
+  if (openSession && !forceOffline && lat != null && lng != null && !gpsDisabled) {
+    const add = segmentKm(openSession.lastLat, openSession.lastLng, lat, lng);
+    openSession.distanceKm = (Number(openSession.distanceKm) || 0) + add;
+    openSession.lastLat = Number(lat);
+    openSession.lastLng = Number(lng);
+    openSession.pointCount = (openSession.pointCount || 0) + 1;
+    await openSession.save();
+    sessionPayload = serializeSession(openSession);
+  } else if (openSession) {
+    sessionPayload = serializeSession(openSession);
   }
 
   const record = await Tracking.findOneAndUpdate(
@@ -209,41 +294,59 @@ export const fieldTrackingUpdate = asyncHandler(async (req, res) => {
       battery: battery ?? "--",
       speed: speed != null && speed !== "" ? String(speed) : "--",
       location: location || "--",
-      status: nextStatus,
-      online: gpsDisabled ? false : online !== false,
+      status: forceOffline ? "Offline" : nextStatus,
+      online: forceOffline || gpsDisabled ? false : online !== false,
       lastUpdated: Date.now(),
     },
     { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
   );
 
-  res.json({ success: true, data: record });
+  res.json({ success: true, data: record, fieldSession: sessionPayload });
 });
 
-// @route  POST /api/field/attendance/check-in
+// @route  POST /api/field/attendance/check-in  (starts field duty session)
 export const fieldCheckIn = asyncHandler(async (req, res) => {
   const employee = req.employee;
   const now = new Date();
   const date = toDateKey(now);
   const checkIn = formatClock(now);
+  const branchId = branchIdOf(employee);
 
-  const existing = await Attendance.findOne({
+  const existingOpen = await FieldSession.findOne({
+    company: req.companyId,
+    employee: employee._id,
+    status: "Open",
+  });
+  if (existingOpen) {
+    res.status(400);
+    throw new Error("Field session already open — check out first");
+  }
+
+  const session = await FieldSession.create({
+    company: req.companyId,
+    employee: employee._id,
+    branch: branchId,
+    date,
+    checkIn,
+    checkOut: "--",
+    startedAt: now,
+    status: "Open",
+    distanceKm: 0,
+    lastLat: req.body.lat != null ? Number(req.body.lat) : null,
+    lastLng: req.body.lng != null ? Number(req.body.lng) : null,
+    pointCount: req.body.lat != null ? 1 : 0,
+  });
+
+  // Office attendance: only create/update if no biometric (or empty) record yet
+  let attendance = await Attendance.findOne({
     company: req.companyId,
     employee: employee._id,
     date,
   });
 
-  if (existing && existing.checkIn && existing.checkIn !== "--") {
-    res.status(400);
-    throw new Error("Already checked in today");
-  }
-
-  const status = await resolveCheckInStatus(employee, now);
-  const branchId =
-    typeof employee.branch === "object" ? employee.branch._id : employee.branch;
-
-  const attendance = await Attendance.findOneAndUpdate(
-    { company: req.companyId, employee: employee._id, date },
-    {
+  if (!attendance) {
+    const status = await resolveCheckInStatus(employee, now);
+    attendance = await Attendance.create({
       company: req.companyId,
       employee: employee._id,
       branch: branchId,
@@ -253,11 +356,18 @@ export const fieldCheckIn = asyncHandler(async (req, res) => {
       hours: "--",
       method: "GPS",
       status,
-    },
-    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
-  );
+    });
+  } else if (
+    (!attendance.checkIn || attendance.checkIn === "--") &&
+    attendance.method !== "Biometric"
+  ) {
+    attendance.checkIn = checkIn;
+    attendance.method = "GPS";
+    attendance.status = await resolveCheckInStatus(employee, now);
+    await attendance.save();
+  }
+  // If Biometric already present — leave Attendance untouched
 
-  // Mark online on check-in if coords provided
   if (req.body.lat != null && req.body.lng != null) {
     await Tracking.findOneAndUpdate(
       { company: req.companyId, employee: employee._id },
@@ -276,39 +386,75 @@ export const fieldCheckIn = asyncHandler(async (req, res) => {
     );
   }
 
-  res.status(201).json({ success: true, data: attendance });
+  const distanceSummary = await todayDistanceForEmployee(
+    req.companyId,
+    employee._id,
+    date
+  );
+
+  res.status(201).json({
+    success: true,
+    data: {
+      fieldSession: serializeSession(session),
+      todayAttendance: attendance,
+      todayFieldDistance: distanceSummary,
+    },
+  });
 });
 
-// @route  POST /api/field/attendance/check-out
+// @route  POST /api/field/attendance/check-out  (ends field duty session)
 export const fieldCheckOut = asyncHandler(async (req, res) => {
   const employee = req.employee;
   const now = new Date();
   const date = toDateKey(now);
   const checkOut = formatClock(now);
 
-  const existing = await Attendance.findOne({
+  const session = await FieldSession.findOne({
+    company: req.companyId,
+    employee: employee._id,
+    status: "Open",
+  });
+
+  if (!session) {
+    res.status(400);
+    throw new Error("No open field session — check in first");
+  }
+
+  if (req.body.lat != null && req.body.lng != null) {
+    const add = segmentKm(
+      session.lastLat,
+      session.lastLng,
+      req.body.lat,
+      req.body.lng
+    );
+    session.distanceKm = (Number(session.distanceKm) || 0) + add;
+    session.lastLat = Number(req.body.lat);
+    session.lastLng = Number(req.body.lng);
+    session.pointCount = (session.pointCount || 0) + 1;
+  }
+
+  session.checkOut = checkOut;
+  session.endedAt = now;
+  session.status = "Closed";
+  await session.save();
+
+  // Only close GPS attendance row; never overwrite biometric check-out times
+  const attendance = await Attendance.findOne({
     company: req.companyId,
     employee: employee._id,
     date,
   });
 
-  if (!existing || !existing.checkIn || existing.checkIn === "--") {
-    res.status(400);
-    throw new Error("Check in first before checking out");
+  if (
+    attendance &&
+    attendance.method === "GPS" &&
+    (!attendance.checkOut || attendance.checkOut === "--")
+  ) {
+    attendance.checkOut = checkOut;
+    attendance.hours = computeHours(attendance.checkIn, checkOut, date);
+    if (attendance.status === "Working") attendance.status = "Present";
+    await attendance.save();
   }
-
-  if (existing.checkOut && existing.checkOut !== "--") {
-    res.status(400);
-    throw new Error("Already checked out today");
-  }
-
-  const hours = computeHours(existing.checkIn, checkOut, date);
-
-  existing.checkOut = checkOut;
-  existing.hours = hours;
-  if (existing.status === "Working") existing.status = "Present";
-  existing.method = existing.method === "Biometric" ? "Biometric" : "GPS";
-  await existing.save();
 
   await Tracking.findOneAndUpdate(
     { company: req.companyId, employee: employee._id },
@@ -320,5 +466,18 @@ export const fieldCheckOut = asyncHandler(async (req, res) => {
     }
   );
 
-  res.json({ success: true, data: existing });
+  const distanceSummary = await todayDistanceForEmployee(
+    req.companyId,
+    employee._id,
+    date
+  );
+
+  res.json({
+    success: true,
+    data: {
+      fieldSession: serializeSession(session),
+      todayAttendance: attendance,
+      todayFieldDistance: distanceSummary,
+    },
+  });
 });

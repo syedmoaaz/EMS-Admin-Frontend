@@ -32,7 +32,8 @@ npx eas build -p android --profile preview
 ## Features
 
 1. Login with **Employee ID** + admin-issued password
-2. GPS **Check in / Check out**
-3. While on duty: location uploads every ~30s
+2. App **field check-in / check-out** starts and stops GPS (biometric at branch does **not** start field work)
+3. While on field duty: location uploads every ~30s and distance is accumulated
 4. Offline queue for tracking points (flushes when online)
 5. GPS off / permission denied → status `GPS Disabled` for admin Live Tracking
+6. Admin Live Tracking shows **distance today** per field employee

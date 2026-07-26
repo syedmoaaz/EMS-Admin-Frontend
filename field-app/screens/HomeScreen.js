@@ -39,11 +39,12 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
   const [refreshing, setRefreshing] = useState(false);
 
   const attendance = profile?.todayAttendance;
-  const checkedIn =
-    attendance?.checkIn && attendance.checkIn !== "--";
-  const checkedOut =
-    attendance?.checkOut && attendance.checkOut !== "--";
-  const onDuty = checkedIn && !checkedOut;
+  const fieldSession = profile?.activeFieldSession;
+  const onDuty = fieldSession?.status === "Open";
+  const todayDistance =
+    profile?.todayFieldDistance?.distanceLabel ||
+    fieldSession?.distanceLabel ||
+    "0 km";
 
   const refresh = useCallback(async () => {
     try {
@@ -174,11 +175,27 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Today&apos;s attendance</Text>
+        <Text style={styles.cardTitle}>Field work (app)</Text>
+        <Row
+          label="Field check in"
+          value={fieldSession?.checkIn || "--"}
+        />
+        <Row
+          label="Field check out"
+          value={onDuty ? "On duty" : fieldSession?.checkOut || "--"}
+        />
+        <Row label="Distance today" value={todayDistance} />
+        <Text style={styles.hint}>
+          App check-in starts GPS tracking. Branch biometric is separate and
+          does not start field work.
+        </Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Office attendance</Text>
         <Row label="Check in" value={attendance?.checkIn || "--"} />
         <Row label="Check out" value={attendance?.checkOut || "--"} />
-        <Row label="Status" value={attendance?.status || "Not checked in"} />
-        <Row label="Hours" value={attendance?.hours || "--"} />
+        <Row label="Status" value={attendance?.status || "—"} />
         <Row label="Method" value={attendance?.method || "--"} />
       </View>
 
@@ -202,7 +219,7 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {!checkedIn && (
+      {!onDuty && (
         <TouchableOpacity
           style={[styles.primaryBtn, busy && styles.disabled]}
           onPress={handleCheckIn}
@@ -211,7 +228,7 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
           {busy ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.primaryText}>Check in</Text>
+            <Text style={styles.primaryText}>Start field work (Check in)</Text>
           )}
         </TouchableOpacity>
       )}
@@ -225,13 +242,9 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
           {busy ? (
             <ActivityIndicator color="#1d4ed8" />
           ) : (
-            <Text style={styles.secondaryText}>Check out</Text>
+            <Text style={styles.secondaryText}>End field work (Check out)</Text>
           )}
         </TouchableOpacity>
-      )}
-
-      {checkedOut && (
-        <Text style={styles.done}>Checked out for today. See you tomorrow.</Text>
       )}
     </ScrollView>
   );
@@ -272,13 +285,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: "#0f172a",
   },
+  hint: {
+    marginTop: 10,
+    fontSize: 12,
+    color: "#64748b",
+    lineHeight: 17,
+  },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 6,
   },
-  rowLabel: { color: "#64748b" },
-  rowValue: { fontWeight: "600", color: "#0f172a" },
+  rowLabel: { color: "#64748b", flex: 1, paddingRight: 8 },
+  rowValue: { fontWeight: "600", color: "#0f172a", flexShrink: 1 },
   primaryBtn: {
     backgroundColor: "#16a34a",
     borderRadius: 14,
@@ -300,10 +319,4 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.7 },
   error: { color: "#dc2626", marginBottom: 8 },
   warn: { color: "#b45309", marginTop: 8, fontSize: 13 },
-  done: {
-    textAlign: "center",
-    marginTop: 16,
-    color: "#64748b",
-    fontWeight: "600",
-  },
 });

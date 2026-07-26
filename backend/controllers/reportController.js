@@ -1,9 +1,12 @@
 import Attendance from "../models/Attendance.js";
 import Tracking from "../models/Tracking.js";
+import FieldSession from "../models/FieldSession.js";
 import Branch from "../models/Branch.js";
 import Employee from "../models/Employee.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { companyQuery } from "../utils/companyScope.js";
+import { toDateKey } from "../services/attendanceIngestService.js";
+import { formatDistanceKm } from "../utils/geoDistance.js";
 
 const defaultRange = () => {
   const to = new Date().toISOString().slice(0, 10);
@@ -109,12 +112,38 @@ export const getTrackingReport = asyncHandler(async (req, res) => {
     });
   }
 
+  const today = toDateKey(new Date());
+  const empIds = records
+    .map((r) => r.employee?._id || r.employee)
+    .filter(Boolean);
+  const sessions = empIds.length
+    ? await FieldSession.find({
+        company: req.companyId,
+        employee: { $in: empIds },
+        date: today,
+      }).select("employee distanceKm")
+    : [];
+  const distByEmp = new Map();
+  for (const s of sessions) {
+    const key = String(s.employee);
+    distByEmp.set(key, (distByEmp.get(key) || 0) + (Number(s.distanceKm) || 0));
+  }
+
+  const data = records.map((r) => {
+    const obj = typeof r.toObject === "function" ? r.toObject() : { ...r };
+    const key = String(obj.employee?._id || obj.employee || "");
+    const km = distByEmp.get(key) || 0;
+    obj.todayDistanceKm = km;
+    obj.todayDistanceLabel = formatDistanceKm(km);
+    return obj;
+  });
+
   const summary = {
-    total: records.length,
-    online: records.filter((r) => r.online).length,
-    moving: records.filter((r) => r.status === "Moving").length,
-    stationary: records.filter((r) => r.status === "Stationary").length,
-    offline: records.filter(
+    total: data.length,
+    online: data.filter((r) => r.online).length,
+    moving: data.filter((r) => r.status === "Moving").length,
+    stationary: data.filter((r) => r.status === "Stationary").length,
+    offline: data.filter(
       (r) => r.status === "Offline" || r.status === "GPS Disabled"
     ).length,
   };
@@ -122,8 +151,8 @@ export const getTrackingReport = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     summary,
-    count: records.length,
-    data: records,
+    count: data.length,
+    data,
   });
 });
 
