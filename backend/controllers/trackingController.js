@@ -4,6 +4,43 @@ import { FIELD_EMPLOYEE_TYPES } from "../models/Employee.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { companyQuery } from "../utils/companyScope.js";
 
+/** No GPS ping for this long → treat as Offline (field app default interval ~30s). */
+const STALE_ONLINE_MS = 2.5 * 60 * 1000;
+
+const isStale = (record) => {
+  if (!record?.lastUpdated) return true;
+  return Date.now() - new Date(record.lastUpdated).getTime() > STALE_ONLINE_MS;
+};
+
+/** Mark stale online rows offline in DB; return records for API response. */
+const reconcileStaleOnline = async (records) => {
+  const staleIds = [];
+  for (const r of records) {
+    if (r.online && isStale(r)) staleIds.push(r._id);
+  }
+
+  if (staleIds.length) {
+    await Tracking.updateMany(
+      { _id: { $in: staleIds } },
+      {
+        $set: {
+          online: false,
+          status: "Offline",
+          lastUpdated: Date.now(),
+        },
+      }
+    );
+  }
+
+  return records.map((r) => {
+    if (!staleIds.some((id) => String(id) === String(r._id))) return r;
+    const obj = typeof r.toObject === "function" ? r.toObject() : { ...r };
+    obj.online = false;
+    obj.status = "Offline";
+    return obj;
+  });
+};
+
 // @route  GET /api/tracking/live
 export const getLiveTracking = asyncHandler(async (req, res) => {
   const records = await Tracking.find(companyQuery(req)).populate({
@@ -12,12 +49,15 @@ export const getLiveTracking = asyncHandler(async (req, res) => {
     populate: { path: "branch", select: "name" },
   });
 
-  res.json({ success: true, count: records.length, data: records });
+  const data = await reconcileStaleOnline(records);
+
+  res.json({ success: true, count: data.length, data });
 });
 
 // @route  GET /api/tracking/stats
 export const getTrackingStats = asyncHandler(async (req, res) => {
-  const records = await Tracking.find(companyQuery(req));
+  let records = await Tracking.find(companyQuery(req));
+  records = await reconcileStaleOnline(records);
 
   res.json({
     success: true,
@@ -34,7 +74,7 @@ export const getTrackingStats = asyncHandler(async (req, res) => {
 
 // @route  GET /api/tracking/:employeeId
 export const getEmployeeTracking = asyncHandler(async (req, res) => {
-  const record = await Tracking.findOne(
+  let record = await Tracking.findOne(
     companyQuery(req, { employee: req.params.employeeId })
   ).populate("employee", "name image designation role department");
 
@@ -42,6 +82,9 @@ export const getEmployeeTracking = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Tracking record not found");
   }
+
+  const [reconciled] = await reconcileStaleOnline([record]);
+  record = reconciled;
 
   res.json({ success: true, data: record });
 });

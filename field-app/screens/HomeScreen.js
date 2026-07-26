@@ -22,6 +22,7 @@ import {
   setTrackingStatusHandler,
   startTracking,
   stopTracking,
+  goOffline,
 } from "../src/tracking";
 
 export default function HomeScreen({ token, profile: initial, onLogout }) {
@@ -129,9 +130,14 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
   };
 
   const handleLogout = async () => {
-    stopTracking();
-    await clearSession();
-    onLogout?.();
+    setBusy(true);
+    try {
+      await goOffline(token);
+      await clearSession();
+      onLogout?.();
+    } finally {
+      setBusy(false);
+    }
   };
 
   const onRefresh = async () => {

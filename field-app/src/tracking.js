@@ -1,4 +1,5 @@
 import * as Location from "expo-location";
+import * as Battery from "expo-battery";
 import NetInfo from "@react-native-community/netinfo";
 import { pushTracking } from "./auth";
 import { enqueuePoint, flushOutbox, getOutboxCount } from "./outbox";
@@ -18,16 +19,43 @@ function emit(status) {
   onStatus?.(status);
 }
 
-async function buildPayload({ gpsDisabled = false } = {}) {
+async function readBatteryLabel() {
+  try {
+    const level = await Battery.getBatteryLevelAsync();
+    if (level == null || level < 0) return "--";
+    return `${Math.round(level * 100)}%`;
+  } catch {
+    return "--";
+  }
+}
+
+async function buildPayload({ gpsDisabled = false, forceOffline = false } = {}) {
   const net = await NetInfo.fetch();
-  const online = Boolean(net.isConnected);
+  const netOnline = Boolean(net.isConnected);
+  const battery = await readBatteryLabel();
+
+  if (forceOffline) {
+    return {
+      lat: lastCoords?.latitude ?? null,
+      lng: lastCoords?.longitude ?? null,
+      speed: "--",
+      battery,
+      location: "--",
+      online: false,
+      gpsDisabled: false,
+      status: "Offline",
+    };
+  }
 
   if (gpsDisabled || !lastCoords) {
     return {
       lat: lastCoords?.latitude ?? null,
       lng: lastCoords?.longitude ?? null,
-      speed: lastCoords?.speed != null ? String(Math.max(0, lastCoords.speed)) : "--",
-      battery: "--",
+      speed:
+        lastCoords?.speed != null
+          ? String(Math.max(0, lastCoords.speed))
+          : "--",
+      battery,
       location: "--",
       online: false,
       gpsDisabled: true,
@@ -41,9 +69,9 @@ async function buildPayload({ gpsDisabled = false } = {}) {
     lat: lastCoords.latitude,
     lng: lastCoords.longitude,
     speed: String(speed.toFixed(1)),
-    battery: "--",
+    battery,
     location: "--",
-    online,
+    online: netOnline,
     gpsDisabled: false,
     status: speed > 0.5 ? "Moving" : "Stationary",
   };
@@ -129,7 +157,6 @@ export async function startTracking(token, intervalMs = DEFAULT_INTERVAL_MS) {
     }
   );
 
-  // Immediate ping
   await readCurrentPosition();
   const first = await buildPayload();
   await sendOrQueue(token, first);
@@ -158,6 +185,18 @@ export function stopTracking() {
     intervalId = null;
   }
   emit({ running: false });
+}
+
+/** Stop GPS and tell EMS this employee is Offline (logout / app exit). */
+export async function goOffline(token) {
+  stopTracking();
+  if (!token) return;
+  try {
+    const payload = await buildPayload({ forceOffline: true });
+    await pushTracking(token, payload);
+  } catch {
+    // Best-effort — stale timeout on server covers uninstall/kill
+  }
 }
 
 export async function flushNow(token) {
