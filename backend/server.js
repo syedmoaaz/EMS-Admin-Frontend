@@ -17,6 +17,7 @@ import settingsRoutes from "./routes/settingsRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import deviceRoutes from "./routes/deviceRoutes.js";
 import fieldRoutes from "./routes/fieldRoutes.js";
+import { startAutoCloseFieldSessionsJob } from "./jobs/autoCloseFieldSessions.js";
 
 dotenv.config();
 
@@ -59,6 +60,7 @@ const PORT = process.env.PORT || 5000;
 const start = async () => {
   try {
     await connectDB();
+    startAutoCloseFieldSessionsJob();
     app.listen(PORT, () =>
       console.log(`Server running on http://localhost:${PORT}`)
     );

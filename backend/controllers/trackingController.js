@@ -57,7 +57,7 @@ const enrichWithFieldDistance = async (companyId, records) => {
     company: companyId,
     employee: { $in: employeeIds },
     date: today,
-  }).select("employee distanceKm status checkIn checkOut");
+  }).select("employee distanceKm status checkIn checkOut closedReason");
 
   const byEmp = new Map();
   for (const s of sessions) {
@@ -67,15 +67,18 @@ const enrichWithFieldDistance = async (companyId, records) => {
       fieldSessionOpen: false,
       fieldCheckIn: null,
       fieldCheckOut: null,
+      fieldClosedReason: null,
     };
     cur.distanceKm += Number(s.distanceKm) || 0;
     if (s.status === "Open") {
       cur.fieldSessionOpen = true;
       cur.fieldCheckIn = s.checkIn;
       cur.fieldCheckOut = "--";
+      cur.fieldClosedReason = null;
     } else if (!cur.fieldSessionOpen) {
       cur.fieldCheckIn = cur.fieldCheckIn || s.checkIn;
       cur.fieldCheckOut = s.checkOut;
+      cur.fieldClosedReason = s.closedReason || cur.fieldClosedReason;
     }
     byEmp.set(key, cur);
   }
@@ -88,12 +91,14 @@ const enrichWithFieldDistance = async (companyId, records) => {
       fieldSessionOpen: false,
       fieldCheckIn: null,
       fieldCheckOut: null,
+      fieldClosedReason: null,
     };
     obj.todayDistanceKm = info.distanceKm;
     obj.todayDistanceLabel = formatDistanceKm(info.distanceKm);
     obj.fieldSessionOpen = info.fieldSessionOpen;
     obj.fieldCheckIn = info.fieldCheckIn;
     obj.fieldCheckOut = info.fieldCheckOut;
+    obj.fieldClosedReason = info.fieldClosedReason;
     return obj;
   });
 };

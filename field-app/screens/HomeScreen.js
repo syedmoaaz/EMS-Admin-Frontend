@@ -24,6 +24,11 @@ import {
   stopTracking,
   goOffline,
 } from "../src/tracking";
+import {
+  cancelCheckoutReminders,
+  ensureNotificationPermission,
+  scheduleCheckoutReminders,
+} from "../src/checkoutReminders";
 
 export default function HomeScreen({ token, profile: initial, onLogout }) {
   const [profile, setProfile] = useState(initial);
@@ -35,6 +40,7 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
     lastError: null,
     status: null,
     gpsDenied: false,
+    background: false,
   });
   const [refreshing, setRefreshing] = useState(false);
 
@@ -46,6 +52,21 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
     fieldSession?.distanceLabel ||
     "0 km";
 
+  const syncRemindersForDuty = useCallback(
+    async (data, duty) => {
+      if (!duty) {
+        await cancelCheckoutReminders();
+        return;
+      }
+      await scheduleCheckoutReminders({
+        shiftEnd: data?.shiftEnd || "06:00 PM",
+        offsetMinutes: data?.checkoutReminderOffsetMinutes ?? 15,
+        intervalMinutes: data?.checkoutReminderIntervalMinutes ?? 15,
+      });
+    },
+    []
+  );
+
   const refresh = useCallback(async () => {
     try {
       const data = await fetchMe(token);
@@ -53,6 +74,12 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
       setError("");
       const pending = await outboxCount();
       setTrackInfo((prev) => ({ ...prev, pending }));
+
+      const duty = data?.activeFieldSession?.status === "Open";
+      if (!duty) {
+        await stopTracking();
+        await cancelCheckoutReminders();
+      }
     } catch (err) {
       setError(err.message || "Failed to refresh");
     }
@@ -62,9 +89,11 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
     setTrackingStatusHandler((s) =>
       setTrackInfo((prev) => ({ ...prev, ...s }))
     );
+    ensureNotificationPermission().catch(() => {});
     return () => {
       setTrackingStatusHandler(null);
-      stopTracking();
+      // Do not stop background GPS on unmount while still on duty —
+      // only stop when checking out / logging out / session closed.
     };
   }, []);
 
@@ -73,19 +102,40 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
     (async () => {
       if (onDuty) {
         const seconds = profile?.gpsRefreshSeconds || 30;
-        await startTracking(token, Math.max(15, Number(seconds) || 30) * 1000);
+        const result = await startTracking(
+          token,
+          Math.max(15, Number(seconds) || 30) * 1000
+        );
+        if (!cancelled) {
+          await syncRemindersForDuty(profile, true);
+        }
+        if (!cancelled) {
+          const pending = await outboxCount();
+          setTrackInfo((prev) => ({
+            ...prev,
+            pending,
+            running: true,
+            background: Boolean(result?.background),
+          }));
+        }
       } else {
-        stopTracking();
-      }
-      if (!cancelled) {
-        const pending = await outboxCount();
-        setTrackInfo((prev) => ({ ...prev, pending, running: onDuty }));
+        await stopTracking();
+        await cancelCheckoutReminders();
+        if (!cancelled) {
+          const pending = await outboxCount();
+          setTrackInfo((prev) => ({
+            ...prev,
+            pending,
+            running: false,
+            background: false,
+          }));
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [onDuty, token, profile?.gpsRefreshSeconds]);
+  }, [onDuty, token, profile?.gpsRefreshSeconds, profile?.shiftEnd, syncRemindersForDuty]);
 
   const coordsPayload = async () => {
     const coords = await readCurrentPosition();
@@ -102,11 +152,22 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
         setError("Location permission is required for GPS check-in.");
         return;
       }
+      await ensureNotificationPermission();
       const coords = await coordsPayload();
       await checkIn(token, coords);
-      await refresh();
-      const seconds = profile?.gpsRefreshSeconds || 30;
-      await startTracking(token, Math.max(15, Number(seconds) || 30) * 1000);
+      const data = await fetchMe(token);
+      setProfile(data);
+      const seconds = data?.gpsRefreshSeconds || profile?.gpsRefreshSeconds || 30;
+      const result = await startTracking(
+        token,
+        Math.max(15, Number(seconds) || 30) * 1000
+      );
+      await syncRemindersForDuty(data, true);
+      setTrackInfo((prev) => ({
+        ...prev,
+        running: true,
+        background: Boolean(result?.background),
+      }));
     } catch (err) {
       setError(err.message || "Check-in failed");
     } finally {
@@ -120,7 +181,8 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
     try {
       const coords = await coordsPayload();
       await checkOut(token, coords);
-      stopTracking();
+      await cancelCheckoutReminders();
+      await stopTracking();
       await flushNow(token);
       await refresh();
     } catch (err) {
@@ -133,6 +195,7 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
   const handleLogout = async () => {
     setBusy(true);
     try {
+      await cancelCheckoutReminders();
       await goOffline(token);
       await clearSession();
       onLogout?.();
@@ -176,18 +239,20 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Field work (app)</Text>
-        <Row
-          label="Field check in"
-          value={fieldSession?.checkIn || "--"}
-        />
+        <Row label="Field check in" value={fieldSession?.checkIn || "--"} />
         <Row
           label="Field check out"
           value={onDuty ? "On duty" : fieldSession?.checkOut || "--"}
         />
         <Row label="Distance today" value={todayDistance} />
+        <Row
+          label="Shift hours"
+          value={`${profile?.shiftStart || "09:00 AM"} – ${profile?.shiftEnd || "06:00 PM"}`}
+        />
         <Text style={styles.hint}>
-          App check-in starts GPS tracking. Branch biometric is separate and
-          does not start field work.
+          App check-in starts GPS (including in the background on the staff
+          APK). After shift end you get checkout reminders every 15 minutes.
+          Open sessions auto-end at midnight.
         </Text>
       </View>
 
@@ -204,6 +269,14 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
         <Row
           label="Tracking"
           value={trackInfo.running ? "On duty — uploading" : "Stopped"}
+        />
+        <Row
+          label="Background"
+          value={
+            trackInfo.background
+              ? "Active (works with app closed)"
+              : "Foreground only — use staff APK for background"
+          }
         />
         <Row label="Last status" value={trackInfo.status || "—"} />
         <Row label="Queued points" value={String(trackInfo.pending || 0)} />
@@ -297,7 +370,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   rowLabel: { color: "#64748b", flex: 1, paddingRight: 8 },
-  rowValue: { fontWeight: "600", color: "#0f172a", flexShrink: 1 },
+  rowValue: { fontWeight: "600", color: "#0f172a", flexShrink: 1, textAlign: "right" },
   primaryBtn: {
     backgroundColor: "#16a34a",
     borderRadius: 14,

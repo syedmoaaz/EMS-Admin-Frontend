@@ -157,7 +157,11 @@ const EmployeeLocationDrawer = ({ open, onClose, record }) => {
                   {record.fieldSessionOpen
                     ? `Field session open${record.fieldCheckIn ? ` since ${record.fieldCheckIn}` : ""}`
                     : record.fieldCheckIn
-                      ? `Last field: ${record.fieldCheckIn} → ${record.fieldCheckOut || "--"}`
+                      ? `Last field: ${record.fieldCheckIn} → ${record.fieldCheckOut || "--"}${
+                          record.fieldClosedReason === "auto_midnight"
+                            ? " (auto-closed at midnight)"
+                            : ""
+                        }`
                       : "No app field check-in today (biometric alone does not start distance)"}
                 </p>
               </div>

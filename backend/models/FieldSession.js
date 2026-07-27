@@ -30,6 +30,11 @@ const fieldSessionSchema = new mongoose.Schema(
       default: "Open",
       index: true,
     },
+    closedReason: {
+      type: String,
+      enum: ["manual", "auto_midnight"],
+      default: undefined,
+    },
     /** Cumulative straight-line distance in km while session is open. */
     distanceKm: { type: Number, default: 0 },
     lastLat: { type: Number, default: null },

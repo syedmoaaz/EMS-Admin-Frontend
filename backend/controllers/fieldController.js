@@ -102,6 +102,20 @@ const todayDistanceForEmployee = async (companyId, employeeId, date) => {
   };
 };
 
+const CHECKOUT_REMINDER_OFFSET_MINUTES = 15;
+const CHECKOUT_REMINDER_INTERVAL_MINUTES = 15;
+
+const buildShiftMeta = async (employee) => {
+  const defaults = await getCompanyScheduleDefaults(employee.company);
+  const schedule = resolveEmployeeSchedule(employee, defaults);
+  return {
+    shiftStart: schedule.start,
+    shiftEnd: schedule.end,
+    checkoutReminderOffsetMinutes: CHECKOUT_REMINDER_OFFSET_MINUTES,
+    checkoutReminderIntervalMinutes: CHECKOUT_REMINDER_INTERVAL_MINUTES,
+  };
+};
+
 // @route  POST /api/field/login
 export const fieldLogin = asyncHandler(async (req, res) => {
   const employeeId = normalizeEmployeeId(req.body.employeeId);
@@ -150,20 +164,22 @@ export const fieldLogin = asyncHandler(async (req, res) => {
   });
 
   const today = toDateKey(new Date());
-  const [attendance, activeSession, distanceSummary, settings] = await Promise.all([
-    Attendance.findOne({
-      company: employee.company,
-      employee: employee._id,
-      date: today,
-    }),
-    FieldSession.findOne({
-      company: employee.company,
-      employee: employee._id,
-      status: "Open",
-    }),
-    todayDistanceForEmployee(employee.company, employee._id, today),
-    Settings.findOne({ company: employee.company }).select("gpsRules"),
-  ]);
+  const [attendance, activeSession, distanceSummary, settings, shiftMeta] =
+    await Promise.all([
+      Attendance.findOne({
+        company: employee.company,
+        employee: employee._id,
+        date: today,
+      }),
+      FieldSession.findOne({
+        company: employee.company,
+        employee: employee._id,
+        status: "Open",
+      }),
+      todayDistanceForEmployee(employee.company, employee._id, today),
+      Settings.findOne({ company: employee.company }).select("gpsRules"),
+      buildShiftMeta(employee),
+    ]);
 
   res.json({
     success: true,
@@ -174,6 +190,7 @@ export const fieldLogin = asyncHandler(async (req, res) => {
       activeFieldSession: serializeSession(activeSession),
       todayFieldDistance: distanceSummary,
       gpsRefreshSeconds: settings?.gpsRules?.refreshIntervalSeconds ?? 30,
+      ...shiftMeta,
     },
   });
 });
@@ -181,7 +198,7 @@ export const fieldLogin = asyncHandler(async (req, res) => {
 // @route  GET /api/field/me
 export const fieldMe = asyncHandler(async (req, res) => {
   const today = toDateKey(new Date());
-  const [attendance, tracking, activeSession, distanceSummary, settings] =
+  const [attendance, tracking, activeSession, distanceSummary, settings, shiftMeta] =
     await Promise.all([
       Attendance.findOne({
         company: req.companyId,
@@ -199,6 +216,7 @@ export const fieldMe = asyncHandler(async (req, res) => {
       }),
       todayDistanceForEmployee(req.companyId, req.employeeId, today),
       Settings.findOne({ company: req.companyId }).select("gpsRules"),
+      buildShiftMeta(req.employee),
     ]);
 
   res.json({
@@ -210,6 +228,7 @@ export const fieldMe = asyncHandler(async (req, res) => {
       activeFieldSession: serializeSession(activeSession),
       todayFieldDistance: distanceSummary,
       gpsRefreshSeconds: settings?.gpsRules?.refreshIntervalSeconds ?? 30,
+      ...shiftMeta,
     },
   });
 });
@@ -391,6 +410,7 @@ export const fieldCheckIn = asyncHandler(async (req, res) => {
     employee._id,
     date
   );
+  const shiftMeta = await buildShiftMeta(employee);
 
   res.status(201).json({
     success: true,
@@ -398,6 +418,7 @@ export const fieldCheckIn = asyncHandler(async (req, res) => {
       fieldSession: serializeSession(session),
       todayAttendance: attendance,
       todayFieldDistance: distanceSummary,
+      ...shiftMeta,
     },
   });
 });
@@ -436,6 +457,7 @@ export const fieldCheckOut = asyncHandler(async (req, res) => {
   session.checkOut = checkOut;
   session.endedAt = now;
   session.status = "Closed";
+  session.closedReason = "manual";
   await session.save();
 
   // Only close GPS attendance row; never overwrite biometric check-out times
