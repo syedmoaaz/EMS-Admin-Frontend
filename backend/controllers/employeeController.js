@@ -5,6 +5,8 @@ import { companyQuery } from "../utils/companyScope.js";
 import {
   resolveEmployeeImage,
   destroyEmployeeImage,
+  resolveEmployeeDocument,
+  destroyEmployeeDocument,
 } from "../utils/cloudinaryImage.js";
 import {
   isValidDevicePin,
@@ -26,6 +28,25 @@ import {
   isFieldRole,
 } from "../utils/fieldPassword.js";
 import { sanitizeEmployee } from "../models/Employee.js";
+
+const ALLOWED_DOC_TYPES = new Set(["cnic_image", "cv", "other"]);
+
+const resolveDocumentsPayload = async (docs) => {
+  if (!Array.isArray(docs)) return undefined;
+  const out = [];
+  for (const d of docs) {
+    if (!d || !ALLOWED_DOC_TYPES.has(d.type) || !d.url) continue;
+    const url = await resolveEmployeeDocument(d.url);
+    if (!url) continue;
+    out.push({
+      type: d.type,
+      name: String(d.name || "").trim() || d.type,
+      url,
+      uploadedAt: d.uploadedAt ? new Date(d.uploadedAt) : new Date(),
+    });
+  }
+  return out;
+};
 
 const verifyBranchBelongsToCompany = async (branchId, companyId, res) => {
   const branch = await Branch.findOne({ _id: branchId, company: companyId });
@@ -135,6 +156,7 @@ export const createEmployee = asyncHandler(async (req, res) => {
   }
 
   const image = await resolveEmployeeImage(req.body.image);
+  const documents = await resolveDocumentsPayload(req.body.documents);
   const defaults = await getCompanyScheduleDefaults(req.companyId);
   const workSchedule = normalizeWorkScheduleInput(
     req.body.workSchedule,
@@ -148,6 +170,7 @@ export const createEmployee = asyncHandler(async (req, res) => {
     password: _pw,
     fieldPassword: _fp,
     hasFieldPassword: _h,
+    documents: _docs,
     ...rest
   } = req.body;
 
@@ -155,6 +178,7 @@ export const createEmployee = asyncHandler(async (req, res) => {
     const employee = await Employee.create({
       ...rest,
       image,
+      ...(documents ? { documents } : {}),
       workSchedule,
       shiftTiming,
       employeeId,
@@ -241,6 +265,17 @@ export const updateEmployee = asyncHandler(async (req, res) => {
     }
   }
 
+  if (updates.documents !== undefined) {
+    const nextDocs = await resolveDocumentsPayload(updates.documents);
+    const nextUrls = new Set((nextDocs || []).map((d) => d.url));
+    for (const old of existing.documents || []) {
+      if (old?.url && !nextUrls.has(old.url)) {
+        await destroyEmployeeDocument(old.url);
+      }
+    }
+    updates.documents = nextDocs || [];
+  }
+
   if (updates.workSchedule !== undefined) {
     const defaults = await getCompanyScheduleDefaults(req.companyId);
     const merged = normalizeWorkScheduleInput(
@@ -309,6 +344,9 @@ export const deleteEmployee = asyncHandler(async (req, res) => {
   }
 
   await destroyEmployeeImage(employee.image);
+  for (const doc of employee.documents || []) {
+    if (doc?.url) await destroyEmployeeDocument(doc.url);
+  }
 
   res.json({ success: true, message: "Employee deleted" });
 });

@@ -14,3 +14,8 @@ export const getAttendanceHistory = async (employeeId) => {
   const { data } = await api.get(`/attendance/history/${employeeId}`);
   return data;
 };
+
+export const createAttendance = async (payload) => {
+  const { data } = await api.post("/attendance", payload);
+  return data;
+};

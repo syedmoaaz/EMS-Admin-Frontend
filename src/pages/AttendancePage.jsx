@@ -6,6 +6,7 @@ import AttendanceStatsCard from "../components/attendance/AttendanceStatsCard";
 import AttendanceFilters from "../components/attendance/AttendanceFilters";
 import AttendanceTable from "../components/attendance/AttendanceTable";
 import AttendanceHistoryDrawer from "../components/attendance/AttendanceHistoryDrawer";
+import ManualAttendanceModal from "../components/attendance/ManualAttendanceModal";
 import * as attendanceService from "../services/attendanceService";
 import * as branchService from "../services/branchService";
 import {
@@ -44,6 +45,7 @@ const AttendancePage = () => {
   const [error, setError] = useState("");
   const [historyRecord, setHistoryRecord] = useState(null);
   const [page, setPage] = useState(1);
+  const [manualOpen, setManualOpen] = useState(false);
 
   const fingerprintRef = useRef("");
   const readyRef = useRef(false);
@@ -194,10 +196,9 @@ const AttendancePage = () => {
       "Employee ID",
       "Branch",
       "Check In",
-      "Check Out",
-      "Hours",
       "Method",
       "Status",
+      "Note",
       "Date",
     ];
 
@@ -209,10 +210,9 @@ const AttendancePage = () => {
         emp.employeeId || "",
         branchName,
         record.checkIn || "",
-        record.checkOut || "",
-        record.hours || "",
         record.method || "",
         record.status || "",
+        record.note || "",
         record.date || date,
       ]
         .map((value) => `"${String(value).replace(/"/g, '""')}"`)
@@ -280,7 +280,8 @@ const AttendancePage = () => {
           <h1 className="text-2xl sm:text-3xl font-bold mt-1">Attendance</h1>
 
           <p className="text-slate-500 mt-1 text-sm sm:text-base">
-            Monitor today&apos;s attendance across all branches.
+            Check-in only — first biometric or manual mark of the day counts as
+            attendance.
           </p>
 
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
@@ -304,6 +305,13 @@ const AttendancePage = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setManualOpen(true)}
+            className="border border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100 transition px-5 py-3 rounded-xl font-medium w-full sm:w-auto"
+          >
+            Manual attendance
+          </button>
           <button
             type="button"
             onClick={toggleLive}
@@ -365,6 +373,13 @@ const AttendancePage = () => {
         open={Boolean(historyRecord)}
         employee={historyRecord}
         onClose={() => setHistoryRecord(null)}
+      />
+
+      <ManualAttendanceModal
+        open={manualOpen}
+        defaultDate={date}
+        onClose={() => setManualOpen(false)}
+        onSaved={() => fetchAttendance({ silent: false })}
       />
     </div>
   );

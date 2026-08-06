@@ -31,6 +31,10 @@ const emptyForm = {
   employeeId: "",
   devicePin: "",
   phone: "",
+  cnic: "",
+  emergencyContactName: "",
+  emergencyContactPhone: "",
+  documents: [],
   branch: "",
   designation: "",
   department: "",
@@ -110,6 +114,17 @@ const AddEmployeeDrawer = ({
           employeeId: employee.employeeId || "",
           devicePin: employee.devicePin || "",
           phone: employee.phone || "",
+          cnic: employee.cnic || "",
+          emergencyContactName: employee.emergencyContactName || "",
+          emergencyContactPhone: employee.emergencyContactPhone || "",
+          documents: Array.isArray(employee.documents)
+            ? employee.documents.map((d) => ({
+                type: d.type,
+                name: d.name || "",
+                url: d.url,
+                uploadedAt: d.uploadedAt,
+              }))
+            : [],
           branch: branchId || "",
           designation: employee.designation || "",
           department: employee.department || "",
@@ -202,6 +217,75 @@ const AddEmployeeDrawer = ({
     }
   };
 
+  const readFileAsDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("Failed to read file."));
+      reader.readAsDataURL(file);
+    });
+
+  const handleDocument = async (docType, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      let url;
+      let name = file.name;
+      if (file.type.startsWith("image/")) {
+        url = await compressImageFile(file, { maxSize: 1200, quality: 0.75 });
+      } else if (
+        file.type === "application/pdf" ||
+        name.toLowerCase().endsWith(".pdf")
+      ) {
+        if (file.size > 8 * 1024 * 1024) {
+          throw new Error("PDF must be under 8 MB.");
+        }
+        url = await readFileAsDataUrl(file);
+      } else {
+        throw new Error("Use an image or PDF file.");
+      }
+
+      setForm((prev) => {
+        const withoutSame =
+          docType === "other"
+            ? prev.documents
+            : (prev.documents || []).filter((d) => d.type !== docType);
+        return {
+          ...prev,
+          documents: [
+            ...withoutSame,
+            { type: docType, name, url, uploadedAt: new Date().toISOString() },
+          ],
+        };
+      });
+      notifySuccess(
+        docType === "cnic_image"
+          ? "CNIC image added"
+          : docType === "cv"
+            ? "CV added"
+            : "Document added"
+      );
+    } catch (err) {
+      notifyError(err.message || "Failed to add document.");
+    } finally {
+      e.target.value = "";
+    }
+  };
+
+  const removeDocument = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      documents: (prev.documents || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const docLabel = (type) => {
+    if (type === "cnic_image") return "CNIC image";
+    if (type === "cv") return "CV";
+    return "Other";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (saving) return;
@@ -271,6 +355,10 @@ const AddEmployeeDrawer = ({
     const payload = {
       name: form.name.trim(),
       phone,
+      cnic: form.cnic.trim(),
+      emergencyContactName: form.emergencyContactName.trim(),
+      emergencyContactPhone: form.emergencyContactPhone.trim(),
+      documents: form.documents || [],
       branch: form.branch,
       designation: form.designation,
       department: form.department.trim(),
@@ -457,6 +545,119 @@ const AddEmployeeDrawer = ({
               <p className="text-xs text-slate-500 mt-1.5">
                 Must be 11 digits and start with 03 (e.g. 03001234567).
               </p>
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm font-medium">CNIC</label>
+              <input
+                name="cnic"
+                value={form.cnic}
+                onChange={handleChange}
+                className="w-full border rounded-xl px-4 py-3"
+                placeholder="XXXXX-XXXXXXX-X"
+              />
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm font-medium">
+                Emergency contact name
+              </label>
+              <input
+                name="emergencyContactName"
+                value={form.emergencyContactName}
+                onChange={handleChange}
+                className="w-full border rounded-xl px-4 py-3"
+                placeholder="Relative / guardian name"
+              />
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm font-medium">
+                Emergency contact phone
+              </label>
+              <input
+                name="emergencyContactPhone"
+                value={form.emergencyContactPhone}
+                onChange={handleChange}
+                className="w-full border rounded-xl px-4 py-3"
+                placeholder="03XXXXXXXXX"
+                inputMode="numeric"
+                maxLength={11}
+              />
+            </div>
+
+            <div className="rounded-xl border border-slate-200 p-4 space-y-3">
+              <p className="text-sm font-semibold text-slate-800">Documents</p>
+              <p className="text-xs text-slate-500">
+                Add CNIC image, CV, or other files (image or PDF).
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <label className="cursor-pointer px-3 py-2 rounded-xl border text-sm font-medium hover:bg-slate-50">
+                  Add CNIC image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleDocument("cnic_image", e)}
+                  />
+                </label>
+                <label className="cursor-pointer px-3 py-2 rounded-xl border text-sm font-medium hover:bg-slate-50">
+                  Add CV
+                  <input
+                    type="file"
+                    accept="image/*,.pdf,application/pdf"
+                    className="hidden"
+                    onChange={(e) => handleDocument("cv", e)}
+                  />
+                </label>
+                <label className="cursor-pointer px-3 py-2 rounded-xl border text-sm font-medium hover:bg-slate-50">
+                  Add other
+                  <input
+                    type="file"
+                    accept="image/*,.pdf,application/pdf"
+                    className="hidden"
+                    onChange={(e) => handleDocument("other", e)}
+                  />
+                </label>
+              </div>
+              {(form.documents || []).length > 0 ? (
+                <ul className="space-y-2">
+                  {form.documents.map((doc, index) => (
+                    <li
+                      key={`${doc.type}-${doc.name}-${index}`}
+                      className="flex items-center justify-between gap-2 text-sm bg-slate-50 rounded-xl px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">
+                          {docLabel(doc.type)}
+                          {doc.name ? ` · ${doc.name}` : ""}
+                        </p>
+                        {doc.url?.startsWith("http") ? (
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs text-blue-600"
+                          >
+                            View
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-400">
+                            Ready to upload
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeDocument(index)}
+                        className="text-red-600 text-xs font-semibold shrink-0"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
 
             <div>

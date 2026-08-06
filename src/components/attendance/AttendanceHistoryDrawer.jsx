@@ -124,14 +124,6 @@ const AttendanceHistoryDrawer = ({ open, onClose, employee }) => {
                       <p className="font-medium">{record.checkIn || "--"}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-400">Check Out</p>
-                      <p className="font-medium">{record.checkOut || "--"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400">Hours</p>
-                      <p className="font-medium">{record.hours || "--"}</p>
-                    </div>
-                    <div>
                       <p className="text-xs text-slate-400">Method</p>
                       <div className="flex items-center gap-1.5 font-medium">
                         {record.method === "Biometric" && (
@@ -143,6 +135,12 @@ const AttendanceHistoryDrawer = ({ open, onClose, employee }) => {
                         {record.method || "--"}
                       </div>
                     </div>
+                    {record.note ? (
+                      <div className="col-span-2">
+                        <p className="text-xs text-slate-400">Note</p>
+                        <p className="font-medium">{record.note}</p>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ))}

@@ -26,7 +26,6 @@ import {
 } from "../src/tracking";
 import {
   cancelCheckoutReminders,
-  ensureNotificationPermission,
   scheduleCheckoutReminders,
 } from "../src/checkoutReminders";
 
@@ -89,11 +88,8 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
     setTrackingStatusHandler((s) =>
       setTrackInfo((prev) => ({ ...prev, ...s }))
     );
-    ensureNotificationPermission().catch(() => {});
     return () => {
       setTrackingStatusHandler(null);
-      // Do not stop background GPS on unmount while still on duty —
-      // only stop when checking out / logging out / session closed.
     };
   }, []);
 
@@ -152,7 +148,6 @@ export default function HomeScreen({ token, profile: initial, onLogout }) {
         setError("Location permission is required for GPS check-in.");
         return;
       }
-      await ensureNotificationPermission();
       const coords = await coordsPayload();
       await checkIn(token, coords);
       const data = await fetchMe(token);

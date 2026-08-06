@@ -27,6 +27,8 @@ const attendanceSchema = new mongoose.Schema(
       enum: ["Biometric", "GPS", "Manual", "--"],
       default: "--",
     },
+    /** Optional note for manual entry (power outage, device down, etc.) */
+    note: { type: String, trim: true, default: "" },
     status: {
       type: String,
       enum: ["Present", "Absent", "Late", "Working", "On Leave"],

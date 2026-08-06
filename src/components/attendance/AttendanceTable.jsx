@@ -1,4 +1,4 @@
-import { Eye, Fingerprint, Smartphone, Users } from "lucide-react";
+import { Eye, Fingerprint, Smartphone, Users, PenLine } from "lucide-react";
 import Pagination from "../Pagination";
 
 const getStatusBadge = (status) => {
@@ -34,21 +34,19 @@ const AttendanceTable = ({
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-4 sm:px-6 py-5 border-b">
-        <h2 className="text-lg sm:text-xl font-bold">Today's Attendance</h2>
+        <h2 className="text-lg sm:text-xl font-bold">Today&apos;s Attendance</h2>
         <p className="text-sm text-slate-500 mt-1">
-          Live attendance across all branches.
+          Check-in only — first mark of the day counts as attendance.
         </p>
       </div>
 
       <div className="table-scroll">
-        <table className="w-full min-w-[860px]">
+        <table className="w-full min-w-[720px]">
           <thead className="bg-slate-50">
             <tr className="text-left text-sm">
               <th className="px-6 py-4">Employee</th>
               <th>Branch</th>
               <th>Check In</th>
-              <th>Check Out</th>
-              <th>Hours</th>
               <th>Method</th>
               <th>Status</th>
               <th className="text-center">Action</th>
@@ -58,7 +56,7 @@ const AttendanceTable = ({
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="py-20">
+                <td colSpan={6} className="py-20">
                   <div className="flex justify-center">
                     <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
                   </div>
@@ -95,8 +93,6 @@ const AttendanceTable = ({
 
                     <td>{branchName}</td>
                     <td>{record.checkIn || "--"}</td>
-                    <td>{record.checkOut || "--"}</td>
-                    <td>{record.hours || "--"}</td>
 
                     <td>
                       {record.method === "Biometric" && (
@@ -111,7 +107,12 @@ const AttendanceTable = ({
                           GPS
                         </div>
                       )}
-                      {record.method === "Manual" && "Manual"}
+                      {record.method === "Manual" && (
+                        <div className="flex items-center gap-2">
+                          <PenLine size={16} className="text-amber-600" />
+                          Manual
+                        </div>
+                      )}
                       {(record.method === "--" || !record.method) && "--"}
                     </td>
 
@@ -123,6 +124,11 @@ const AttendanceTable = ({
                       >
                         {record.status}
                       </span>
+                      {record.note ? (
+                        <p className="text-xs text-slate-400 mt-1 max-w-[140px] truncate" title={record.note}>
+                          {record.note}
+                        </p>
+                      ) : null}
                     </td>
 
                     <td className="text-center">
@@ -140,7 +146,7 @@ const AttendanceTable = ({
               })
             ) : (
               <tr>
-                <td colSpan={8} className="py-20">
+                <td colSpan={6} className="py-20">
                   <div className="flex flex-col items-center text-slate-500">
                     <Users size={36} className="text-blue-600 mb-3" />
                     <p className="font-medium text-slate-800">

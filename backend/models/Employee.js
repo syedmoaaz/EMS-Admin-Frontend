@@ -43,6 +43,22 @@ const employeeSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     phone: { type: String, trim: true },
     image: { type: String, default: "" },
+    /** Pakistan CNIC — digits / dashes, free-form length */
+    cnic: { type: String, trim: true, default: "" },
+    emergencyContactName: { type: String, trim: true, default: "" },
+    emergencyContactPhone: { type: String, trim: true, default: "" },
+    documents: [
+      {
+        type: {
+          type: String,
+          enum: ["cnic_image", "cv", "other"],
+          required: true,
+        },
+        name: { type: String, trim: true, default: "" },
+        url: { type: String, required: true },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
     branch: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Branch",
